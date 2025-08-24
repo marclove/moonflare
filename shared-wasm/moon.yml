@@ -1,0 +1,19 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+language: 'bash'
+layer: 'tool'
+
+tasks:
+  gather:
+    description: 'Copy built .wasm from crates/* into shared-wasm/'
+    script: |
+      set -euo pipefail
+      # Remove old WASM files (ignore if none)
+      rm -f ./*.wasm || true
+      # Copy any found WASM files from crates (ignore if none)
+      find "$workspaceRoot/crates" -path "*/target/wasm32-unknown-unknown/release/*.wasm" -exec cp {} . \; || true
+    outputs:
+      - '*.wasm'
+    deps:
+      - 'math:build'
+    options:
+      shell: true

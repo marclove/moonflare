@@ -1,7 +1,7 @@
 $schema: "https://moonrepo.dev/schemas/toolchain.json"
 
 proto:
-  version: "latest"
+  version: "0.52.1"
 
 node:
   version: "latest"

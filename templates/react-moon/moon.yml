@@ -22,3 +22,39 @@ tasks:
       - 'dist'
     deps:
       - 'shared-wasm:gather'
+
+  lint:
+    command: 'pnpm'
+    args: ['biome', 'lint', '.']
+    inputs:
+      - "src/**/*"
+      - "*.tsx"
+      - "*.ts"
+      - "*.jsx"
+      - "*.js"
+      - "biome.json"
+      - "package.json"
+
+  format:
+    command: 'pnpm'
+    args: ['biome', 'format', '--write', '.']
+    inputs:
+      - "src/**/*"
+      - "*.tsx"
+      - "*.ts"
+      - "*.jsx"
+      - "*.js"
+      - "biome.json"
+      - "package.json"
+
+  check:
+    command: 'pnpm'
+    args: ['biome', 'check', '.']
+    inputs:
+      - "src/**/*"
+      - "*.tsx"
+      - "*.ts"
+      - "*.jsx"
+      - "*.js"
+      - "biome.json"
+      - "package.json"

@@ -3,9 +3,3 @@ $schema: '../../.moon/cache/schemas/template.json'
 
 title: 'Title'
 description: 'Description of the template.'
-variables:
-  name:
-    type: 'string'
-    default: ''
-    required: true
-    prompt: 'Package name?'

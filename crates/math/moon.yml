@@ -19,7 +19,7 @@ tasks:
     command: 'cargo'
     args: ['test']
 
-  check:
+  typecheck:
     command: 'cargo'
     args: ['check']
 
