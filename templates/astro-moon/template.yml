@@ -1,0 +1,11 @@
+# https://moonrepo.dev/docs/config/template
+$schema: '../../.moon/cache/schemas/template.json'
+
+title: "Astro's moon file"
+description: 'The moon configuration file for an astro app'
+# variables:
+#   name:
+#     type: 'string'
+#     default: ''
+#     required: true
+#     prompt: 'Package name?'

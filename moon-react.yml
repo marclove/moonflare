@@ -1,0 +1,24 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+language: 'typescript'
+layer: 'application'
+stack: 'frontend'
+
+tasks:
+  build:
+    command: 'pnpm'
+    args: ['build']
+    inputs:
+      - "public/**/*"
+      - "src/**/*"
+      - "eslint.config.*"
+      - "index.html"
+      - "package.json"
+      - "tsconfig.*"
+      - "vite.config.*"
+      - "worker-configuration.d.ts"
+      - "wrangler.*"
+      - "/shared-wasm/*.wasm"
+    outputs:
+      - 'dist'
+    deps:
+      - 'shared-wasm:gather'

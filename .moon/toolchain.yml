@@ -1,0 +1,15 @@
+$schema: "https://moonrepo.dev/schemas/toolchain.json"
+
+proto:
+  version: "latest"
+
+node:
+  version: "latest"
+  packageManager: "pnpm"
+
+rust:
+  version: "latest"
+
+typescript:
+  includeProjectReferenceSources: true
+  includeSharedTypes: true
