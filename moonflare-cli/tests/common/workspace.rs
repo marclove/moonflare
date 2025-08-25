@@ -39,6 +39,10 @@ impl MoonflareTestWorkspace {
         self.temp_dir.path()
     }
 
+    pub fn moonflare_binary(&self) -> &PathBuf {
+        &self.moonflare_binary
+    }
+
     pub fn init(&self, name: &str) -> anyhow::Result<()> {
         let start = Instant::now();
         log(&format!("Initializing workspace: {}", name));
