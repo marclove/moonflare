@@ -6,7 +6,7 @@ FILE:package.json
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "lint": "biome lint .",
     "format": "biome format --write .",
@@ -49,12 +49,12 @@ tasks:
       - "tsconfig.*"
       - "vite.config.*"
       - "worker-configuration.d.ts"
-      - "wrangler.*"
-      - "/shared-wasm/*.wasm"
+      - "wrangler.*"{{#if has_wasm}}
+      - "/shared-wasm/*.wasm"{{/if}}
     outputs:
-      - 'dist'
+      - 'dist'{{#if has_wasm}}
     deps:
-      - 'shared-wasm:gather'
+      - 'shared-wasm:gather'{{/if}}
 
   dev:
     command: 'pnpm'

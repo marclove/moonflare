@@ -18,7 +18,7 @@ FILE:package.json
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "@astro/check": "^0.9.0",
+    "@astrojs/check": "^0.9.4",
     "typescript": "^5.0.0"
   }
 }
@@ -40,12 +40,12 @@ tasks:
       - "package.json"
       - "tsconfig.*"
       - "worker-configuration.d.ts"
-      - "wrangler.*"
-      - "/shared-wasm/*.wasm"
+      - "wrangler.*"{{#if has_wasm}}
+      - "/shared-wasm/*.wasm"{{/if}}
     outputs:
-      - 'dist'
+      - 'dist'{{#if has_wasm}}
     deps:
-      - 'shared-wasm:gather'
+      - 'shared-wasm:gather'{{/if}}
 
   dev:
     command: 'pnpm'

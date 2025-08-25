@@ -19,7 +19,7 @@ Moonflare is a CLI utility for creating and managing Cloudflare-focused monorepo
 
 The Moonflare CLI is built in Rust with:
 - **Clap** for command parsing and help generation
-- **Handlebars** for template processing with variable substitution
+- **Handlebars** for template processing with `convert_case` for string transformations
 - **Embedded templates** for all project types (Astro, React, Durable Objects, Rust crates)
 - **Moon integration** for task orchestration and dependency management
 - **Cloudflare integration** via Wrangler CLI for deployment
@@ -108,10 +108,14 @@ The Moonflare CLI is built in Rust with:
 1. Initialize: `moonflare init my-project`
 2. Add projects: `moonflare add react my-app` 
 3. WASM crates automatically integrate with TypeScript projects
-4. Use Moon's task dependencies for proper build ordering
-5. Deploy with `moonflare deploy` using Wrangler integration
+4. Projects without crates build normally (no WASM gathering required)
+5. Projects with crates automatically trigger WASM compilation and gathering
+6. Use Moon's task dependencies for proper build ordering
+7. Deploy with `moonflare deploy` using Wrangler integration
 
 ### Key Integration Points
 - **Moon CLI**: Automatically installed via proto if missing
 - **Wrangler**: Required for Cloudflare deployment (manual install)
 - **WASM Pipeline**: Rust → wasm32-unknown-unknown → shared-wasm/ → TypeScript imports
+- **Modern Cloudflare Workers**: Uses `extends DurableObject` from "cloudflare:workers"
+- **pnpm Workspaces**: Proper workspace configuration via pnpm-workspace.yaml

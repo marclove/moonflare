@@ -27,24 +27,72 @@ typescript:
   includeProjectReferenceSources: true
   includeSharedTypes: true
 
+
 FILE:shared-wasm/moon.yml
 $schema: 'https://moonrepo.dev/schemas/project.json'
-language: 'bash'
+language: 'node'
 layer: 'tool'
 
 tasks:
   gather:
     description: 'Copy built .wasm from crates/* into shared-wasm/'
-    script: |
-      set -euo pipefail
-      # Remove old WASM files (ignore if none)
-      rm -f ./*.wasm || true
-      # Copy any found WASM files from crates (ignore if none)
-      find "$workspaceRoot/crates" -path "*/target/wasm32-unknown-unknown/release/*.wasm" -exec cp {} . \; || true
+    command: 'node'
+    args: ['gather-wasm.cjs']
     outputs:
       - '*.wasm'
-    options:
-      shell: true
+
+FILE:shared-wasm/gather-wasm.cjs
+const fs = require('fs');
+const path = require('path');
+
+console.log('🔍 Gathering WASM files...');
+
+// Remove old WASM files
+try {
+  const files = fs.readdirSync('.');
+  files.filter(f => f.endsWith('.wasm')).forEach(f => {
+    fs.unlinkSync(f);
+  });
+} catch (e) {
+  // Directory might not exist or no files to remove
+}
+
+const workspaceRoot = process.env.workspaceRoot || path.resolve('..');
+const cratesDir = path.join(workspaceRoot, 'crates');
+let wasmFilesFound = false;
+
+// Get all crate directories
+const crateList = fs.readdirSync(cratesDir).filter(item => {
+  return fs.statSync(path.join(cratesDir, item)).isDirectory();
+});
+
+console.log(`📦 Found ${crateList.length} crate(s): ${crateList.join(', ')}`);
+
+// Look for built WASM files
+for (const crateName of crateList) {
+  const wasmDir = path.join(cratesDir, crateName, 'target', 'wasm32-unknown-unknown', 'release');
+  
+  if (fs.existsSync(wasmDir)) {
+    const wasmFiles = fs.readdirSync(wasmDir).filter(f => f.endsWith('.wasm'));
+    
+    for (const wasmFile of wasmFiles) {
+      console.log(`📋 Copying ${wasmFile} from ${crateName}`);
+      fs.copyFileSync(path.join(wasmDir, wasmFile), wasmFile);
+      wasmFilesFound = true;
+    }
+  } else {
+    console.error(`❌ No WASM build found for crate '${crateName}'`);
+    console.error(`   Run: cd crates/${crateName} && cargo build --target wasm32-unknown-unknown --release`);
+  }
+}
+
+if (!wasmFilesFound) {
+  console.error('❌ No built WASM files found!');
+  console.error('   Build your crates first with: moon run crates/*:build');
+  process.exit(1);
+}
+
+console.log('✅ WASM gather completed successfully');
 
 FILE:shared-wasm/.keep
 
@@ -55,11 +103,6 @@ FILE:package.json
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "apps/*",
-    "sites/*",
-    "workers/*"
-  ],
   "engines": {
     "node": ">=18"
   },
@@ -75,6 +118,12 @@ FILE:package.json
     "@moonrepo/cli": "latest"
   }
 }
+
+FILE:pnpm-workspace.yaml
+packages:
+  - 'apps/*'
+  - 'sites/*'
+  - 'workers/*'
 
 FILE:justfile
 default:

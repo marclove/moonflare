@@ -22,6 +22,15 @@ language: 'rust'
 layer: 'library'
 
 tasks:
+  build:
+    command: 'cargo'
+    args: ['build', '--release', '--target', 'wasm32-unknown-unknown']
+    inputs:
+      - 'src/**/*'
+      - 'Cargo.toml'
+    outputs:
+      - 'target/wasm32-unknown-unknown/release/*.wasm'
+
   format:
     command: 'cargo'
     args: ['fmt']
@@ -45,15 +54,6 @@ tasks:
   docs:
     command: 'cargo'
     args: ['rustdoc']
-
-  build:
-    command: 'cargo'
-    args: ['build', '--release', '--target', 'wasm32-unknown-unknown']
-    inputs:
-      - 'src/**/*'
-      - 'Cargo.toml'
-    outputs:
-      - 'target/wasm32-unknown-unknown/release/*.wasm'
 
 FILE:src/lib.rs
 use wasm_bindgen::prelude::*;

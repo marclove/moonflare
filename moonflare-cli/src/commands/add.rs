@@ -4,7 +4,7 @@ use std::path::Path;
 use std::collections::HashMap;
 use serde_json::Value;
 use crate::templates::{embedded, engine::TemplateEngine};
-use crate::utils::fs::{create_directory_if_not_exists, is_moonflare_workspace, get_project_directory};
+use crate::utils::fs::{create_directory_if_not_exists, is_moonflare_workspace, get_project_directory, has_crates, get_typescript_projects, add_wasm_dependency_to_project, has_wasm_dependency, add_crate_build_dependency_to_shared_wasm};
 
 pub struct AddCommand {
     template_engine: TemplateEngine,
@@ -49,6 +49,15 @@ impl AddCommand {
             _ => {}
         }
 
+        // For TypeScript projects, check if we need WASM dependencies
+        let is_typescript_project = matches!(project_type, "astro" | "react" | "durable-object");
+        let should_add_wasm_deps = is_typescript_project && has_crates();
+        
+        // Add WASM context if needed
+        if should_add_wasm_deps {
+            context.insert("has_wasm".to_string(), Value::Bool(true));
+        }
+
         // Generate project files
         self.template_engine.process_template_files(
             template,
@@ -59,7 +68,13 @@ impl AddCommand {
         // Handle special post-generation tasks
         match project_type {
             "crate" => {
-                self.update_shared_wasm_config(name).await?;
+                // When adding a crate, update all existing TypeScript projects to depend on WASM
+                self.add_wasm_dependencies_to_existing_projects().await?;
+                // Update shared-wasm to depend on this new crate
+                self.add_crate_dependency_to_shared_wasm(name).await?;
+            },
+            "astro" | "react" | "durable-object" => {
+                // WASM dependencies are handled by template context
             },
             _ => {}
         }
@@ -93,10 +108,26 @@ impl AddCommand {
         Ok(())
     }
 
-    async fn update_shared_wasm_config(&self, crate_name: &str) -> Result<()> {
-        // TODO: Update shared-wasm/moon.yml to add the new crate as a dependency
-        // For now, just print a note
-        println!("{}", "📝 Note: Add this crate to shared-wasm/moon.yml dependencies manually".yellow());
+    async fn add_wasm_dependencies_to_existing_projects(&self) -> Result<()> {
+        let typescript_projects = get_typescript_projects();
+        let mut updated_count = 0;
+        
+        for project_path in typescript_projects {
+            if !has_wasm_dependency(&project_path) {
+                add_wasm_dependency_to_project(&project_path)?;
+                updated_count += 1;
+            }
+        }
+        
+        if updated_count > 0 {
+            println!("{}", format!("📝 Updated {} existing TypeScript project(s) to use WASM", updated_count).yellow());
+        }
+        
+        Ok(())
+    }
+
+    async fn add_crate_dependency_to_shared_wasm(&self, crate_name: &str) -> Result<()> {
+        add_crate_build_dependency_to_shared_wasm(crate_name)?;
         Ok(())
     }
 }

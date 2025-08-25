@@ -13,6 +13,7 @@ Moonflare combines the power of [Moon](https://moonrepo.dev) for monorepo manage
 - **📦 Smart Dependencies**: Automatic dependency management via Moon's task system
 - **🛠️ Integrated Tooling**: Biome formatting/linting, TypeScript, and Rust toolchains
 - **🚀 Zero Config**: Everything works out of the box with sensible defaults
+- **🏷️ Intelligent Builds**: Projects build efficiently with or without WASM dependencies
 
 ## 🚀 Quick Start
 
@@ -37,7 +38,7 @@ cd my-awesome-project
 
 # Add different project types
 moonflare add astro marketing-site       # Static marketing site
-moonflare add react admin-dashboard      # Interactive dashboard  
+moonflare add react admin-dashboard      # Interactive dashboard
 moonflare add durable-object user-state  # Stateful edge service
 moonflare add crate image-processing     # High-performance WASM library
 
@@ -99,13 +100,13 @@ my-project/
 
 ## 🔄 WASM Integration Workflow
 
-Moonflare's killer feature is seamless WASM integration:
+Moonflare's killer feature is seamless WASM integration with intelligent conditional builds:
 
 1. **Write Rust**: Create high-performance libraries in `crates/`
-2. **Build WASM**: Automatically compiled to `wasm32-unknown-unknown` target  
-3. **Collect Artifacts**: `shared-wasm` project gathers all `.wasm` files
-4. **Import in TypeScript**: WASM automatically available in React/Astro projects
-5. **Deploy**: Everything deployed together to Cloudflare's edge
+2. **Collect Artifacts**: `shared-wasm` project gathers all `.wasm` files (only when crates exist)
+3. **Import in TypeScript**: WASM automatically available in React/Astro projects
+4. **Deploy**: Everything deployed together to Cloudflare's edge
+5. **Graceful Builds**: Projects without WASM dependencies build normally without errors
 
 ```rust
 // crates/math/src/lib.rs
@@ -128,21 +129,23 @@ const result = fibonacci(40); // Blazingly fast! 🔥
 - **Monorepo Management**: [Moon](https://moonrepo.dev)
 - **Package Management**: pnpm with workspaces
 - **Frontend**: Astro, React 19, Vite 6
-- **Backend**: Cloudflare Workers, Durable Objects
-- **WASM**: Rust with wasm-bindgen
+- **Backend**: Cloudflare Workers, Durable Objects (modern `extends DurableObject` syntax)
+- **WASM**: Rust with wasm-bindgen, conditional compilation
 - **Linting/Formatting**: Biome
 - **Deployment**: Wrangler CLI
 - **Task Running**: Just + Moon
+- **String Processing**: convert_case for reliable template transformations
 
 ## 🌐 Cloudflare Integration
 
 Moonflare is optimized for Cloudflare's developer platform:
 
 - **Pages**: Deploy Astro and React apps with zero config
-- **Workers**: TypeScript-first with full type safety
-- **Durable Objects**: Stateful services at the edge
-- **WASM**: High-performance Rust code running on V8
+- **Workers**: TypeScript-first with full type safety using modern patterns
+- **Durable Objects**: Stateful services at the edge with latest `extends DurableObject` syntax
+- **WASM**: High-performance Rust code running on V8 with conditional compilation
 - **KV/R2/D1**: Easy integration with Cloudflare services
+- **Smart Builds**: Only compiles WASM when crates are present, graceful fallbacks otherwise
 
 ## 🔧 Development
 

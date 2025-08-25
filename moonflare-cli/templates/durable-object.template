@@ -6,7 +6,7 @@ FILE:package.json
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "build": "tsc && wrangler deploy --dry-run",
+    "build": "tsc",
     "deploy": "wrangler deploy",
     "lint": "biome lint .",
     "format": "biome format --write .",
@@ -38,12 +38,12 @@ tasks:
       - "package.json"
       - "tsconfig.*"
       - "worker-configuration.d.ts"
-      - "wrangler.*"
-      - '/shared-wasm/*.wasm'
+      - "wrangler.*"{{#if has_wasm}}
+      - '/shared-wasm/*.wasm'{{/if}}
     outputs:
-      - 'dist'
+      - 'dist'{{#if has_wasm}}
     deps:
-      - 'shared-wasm:gather'
+      - 'shared-wasm:gather'{{/if}}
 
   dev:
     command: 'pnpm'
@@ -141,24 +141,27 @@ compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
 
 [[durable_objects.bindings]]
-name = "{{name|upper}}_DURABLE_OBJECT"
-class_name = "{{name|title}}DurableObject"
+name = "{{upper name}}_DURABLE_OBJECT"
+class_name = "{{title name}}DurableObject"
 
 [[migrations]]
 tag = "v1"
-new_classes = ["{{name|title}}DurableObject"]
+new_classes = ["{{title name}}DurableObject"]
 
 FILE:src/index.ts
 /**
  * {{name}} - Cloudflare Durable Object
  */
+import { DurableObject } from "cloudflare:workers";
 
 export interface Env {
-  {{name|upper}}_DURABLE_OBJECT: DurableObjectNamespace<{{name|title}}DurableObject>;
+  {{upper name}}_DURABLE_OBJECT: DurableObjectNamespace<{{title name}}DurableObject>;
 }
 
-export class {{name|title}}DurableObject implements DurableObject {
-  constructor(private ctx: DurableObjectState, private env: Env) {}
+export class {{title name}}DurableObject extends DurableObject {
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+  }
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
@@ -186,11 +189,9 @@ export class {{name|title}}DurableObject implements DurableObject {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const url = new URL(request.url);
-    
     // Create or get Durable Object instance
-    const id = env.{{name|upper}}_DURABLE_OBJECT.idFromName("default");
-    const durableObject = env.{{name|upper}}_DURABLE_OBJECT.get(id);
+    const id = env.{{upper name}}_DURABLE_OBJECT.idFromName("default");
+    const durableObject = env.{{upper name}}_DURABLE_OBJECT.get(id);
     
     // Forward request to Durable Object
     return durableObject.fetch(request);

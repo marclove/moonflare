@@ -3,8 +3,8 @@ use handlebars::Handlebars;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::Path;
-use walkdir::WalkDir;
 use std::fs;
+use convert_case::{Case, Casing};
 
 pub struct TemplateEngine {
     handlebars: Handlebars<'static>,
@@ -12,8 +12,26 @@ pub struct TemplateEngine {
 
 impl TemplateEngine {
     pub fn new() -> Self {
+        let mut handlebars = Handlebars::new();
+        
+        // Register helper for uppercase conversion (SCREAMING_SNAKE_CASE)
+        handlebars.register_helper("upper", Box::new(|h: &handlebars::Helper, _: &handlebars::Handlebars, _: &handlebars::Context, _: &mut handlebars::RenderContext, out: &mut dyn handlebars::Output| -> handlebars::HelperResult {
+            let param = h.param(0).and_then(|v| v.value().as_str()).unwrap_or("");
+            let upper_case = param.to_case(Case::ScreamingSnake);
+            out.write(&upper_case)?;
+            Ok(())
+        }));
+        
+        // Register helper for title case conversion (PascalCase)
+        handlebars.register_helper("title", Box::new(|h: &handlebars::Helper, _: &handlebars::Handlebars, _: &handlebars::Context, _: &mut handlebars::RenderContext, out: &mut dyn handlebars::Output| -> handlebars::HelperResult {
+            let param = h.param(0).and_then(|v| v.value().as_str()).unwrap_or("");
+            let pascal_case = param.to_case(Case::Pascal);
+            out.write(&pascal_case)?;
+            Ok(())
+        }));
+        
         Self {
-            handlebars: Handlebars::new(),
+            handlebars,
         }
     }
     

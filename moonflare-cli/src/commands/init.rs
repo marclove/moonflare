@@ -4,7 +4,7 @@ use std::path::Path;
 use std::collections::HashMap;
 use serde_json::Value;
 use crate::templates::{embedded, engine::TemplateEngine};
-use crate::utils::{fs::create_directory_if_not_exists, moon::check_moon_installation};
+use crate::utils::{fs::create_directory_if_not_exists, moon::{check_moon_installation, moon_setup}};
 
 pub struct InitCommand {
     template_engine: TemplateEngine,
@@ -51,12 +51,27 @@ impl InitCommand {
             create_directory_if_not_exists(&target_dir.join(dir))?;
         }
 
+        // Run moon setup in the new workspace
+        println!("{}", "🔧 Initializing Moon workspace...".blue());
+        let current_dir = std::env::current_dir()?;
+        std::env::set_current_dir(&target_dir)?;
+        
+        match moon_setup().await {
+            Ok(_) => println!("✅ {}", "Moon workspace initialized".green()),
+            Err(e) => {
+                println!("⚠️  {}", format!("Moon setup failed: {}", e).yellow());
+                println!("You can run 'moon setup' manually later.");
+            }
+        }
+        
+        // Restore original directory
+        std::env::set_current_dir(current_dir)?;
+
         println!("✅ {}", format!("Successfully created {} monorepo!", name).green().bold());
         println!();
         println!("{}", "Next steps:".yellow().bold());
         println!("  cd {}", name);
         println!("  moonflare add <type> <name>  # Add a new project");
-        println!("  moon setup                  # Initialize Moon workspace");
         println!();
         println!("{}", "Available project types:".blue());
         println!("  • astro          - Astro static site");
