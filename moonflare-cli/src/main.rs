@@ -1,9 +1,10 @@
 use clap::{Parser, Subcommand};
-use anyhow::Result;
+use miette::Result;
 
 mod commands;
 mod templates;
 mod utils;
+mod errors;
 
 use commands::{init::InitCommand, add::AddCommand, build::BuildCommand, dev::DevCommand, deploy::DeployCommand};
 
@@ -59,6 +60,9 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Install miette panic and error hooks for better error reporting
+    miette::set_panic_hook();
+    
     let cli = Cli::parse();
     
     match cli.command {
@@ -68,7 +72,8 @@ async fn main() -> Result<()> {
         },
         Commands::Add { project_type, name } => {
             let add_cmd = AddCommand::new();
-            add_cmd.execute(&project_type, &name).await?;
+            add_cmd.execute(&project_type, &name).await
+                .map_err(|e| miette::miette!("Add command failed: {}", e))?;
         },
         Commands::Build { project } => {
             let build_cmd = BuildCommand::new();
@@ -76,11 +81,13 @@ async fn main() -> Result<()> {
         },
         Commands::Dev { project } => {
             let dev_cmd = DevCommand::new();
-            dev_cmd.execute(project.as_deref()).await?;
+            dev_cmd.execute(project.as_deref()).await
+                .map_err(|e| miette::miette!("Dev command failed: {}", e))?;
         },
         Commands::Deploy { project, env } => {
             let deploy_cmd = DeployCommand::new();
-            deploy_cmd.execute(project.as_deref(), env.as_deref()).await?;
+            deploy_cmd.execute(project.as_deref(), env.as_deref()).await
+                .map_err(|e| miette::miette!("Deploy command failed: {}", e))?;
         },
     }
     
