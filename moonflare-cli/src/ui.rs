@@ -178,25 +178,28 @@ impl MoonflareUI {
         suggestions: Vec<&str>,
     ) -> Result<(), ConsoleError> {
         // Render error messages to stderr
-        self.console.stderr().render(element! {
-            Container {
-                Notice(variant: Variant::Failure, title: title.to_owned()) {
-                    Text(content: message)
-                }
+        self.console.stderr().render(
+            element! {
+                Container {
+                    Notice(variant: Variant::Failure, title: title.to_owned()) {
+                        Text(content: message)
+                    }
 
-                Section(title: "Solutions") {
-                    List {
-                        #(suggestions.into_iter().map(|suggestion| {
-                            element! {
-                                ListItem {
-                                    StyledText(content: suggestion, style: Style::Shell)
+                    Section(title: "Solutions") {
+                        List {
+                            #(suggestions.into_iter().map(|suggestion| {
+                                element! {
+                                    ListItem {
+                                        StyledText(content: suggestion, style: Style::Shell)
+                                    }
                                 }
-                            }
-                        }))
+                            }))
+                        }
                     }
                 }
-            }
-        }, self.console.theme())
+            },
+            self.console.theme(),
+        )
     }
 
     pub fn render_main_help(&self) -> Result<(), ConsoleError> {

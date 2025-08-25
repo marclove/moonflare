@@ -1,4 +1,4 @@
-use super::{log, MoonflareTestWorkspace, ProjectType};
+use super::{MoonflareTestWorkspace, ProjectType, log};
 
 // Verification functions
 impl MoonflareTestWorkspace {

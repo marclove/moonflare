@@ -1,10 +1,10 @@
 use crate::templates::{embedded, engine::TemplateEngine};
+use crate::ui::MoonflareUI;
 use crate::utils::fs::{
     add_crate_build_dependency_to_shared_wasm, add_wasm_dependency_to_project,
     create_directory_if_not_exists, get_project_directory, get_typescript_projects, has_crates,
     has_wasm_dependency, is_moonflare_workspace,
 };
-use crate::ui::MoonflareUI;
 use anyhow::{Result, bail};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -29,10 +29,12 @@ impl AddCommand {
             bail!("Not in a Moonflare workspace. Run 'moonflare init <name>' first.");
         }
 
-        self.ui.render_header(
-            "Adding project", 
-            Some(&format!("Creating {} project '{}'", project_type, name))
-        ).map_err(|e| anyhow::anyhow!("UI render error: {}", e))?;
+        self.ui
+            .render_header(
+                "Adding project",
+                Some(&format!("Creating {} project '{}'", project_type, name)),
+            )
+            .map_err(|e| anyhow::anyhow!("UI render error: {}", e))?;
 
         // Get the appropriate directory for this project type
         let project_dir = get_project_directory(project_type);
@@ -86,13 +88,15 @@ impl AddCommand {
             _ => {}
         }
 
-        self.ui.render_success(&format!(
-            "Successfully created {} project '{}'", 
-            project_type, 
-            name
-        )).map_err(|e| anyhow::anyhow!("UI render error: {}", e))?;
-        
-        self.ui.render_next_steps_for_project(name, project_type)
+        self.ui
+            .render_success(&format!(
+                "Successfully created {} project '{}'",
+                project_type, name
+            ))
+            .map_err(|e| anyhow::anyhow!("UI render error: {}", e))?;
+
+        self.ui
+            .render_next_steps_for_project(name, project_type)
             .map_err(|e| anyhow::anyhow!("UI render error: {}", e))?;
 
         Ok(())
@@ -116,7 +120,10 @@ impl AddCommand {
             )) {
                 ui
             } else {
-                println!("Updated {} existing TypeScript project(s) to use WASM", updated_count);
+                println!(
+                    "Updated {} existing TypeScript project(s) to use WASM",
+                    updated_count
+                );
             }
         }
 

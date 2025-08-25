@@ -15,6 +15,7 @@
 //! Individual smoke tests can be run with:
 //! cargo test --test deployment_smoke_tests test_full_deployment_workflow -- --ignored
 
+mod common;
 use common::*;
 use std::fs;
 use std::process::Command;

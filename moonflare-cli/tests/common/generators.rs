@@ -1,5 +1,5 @@
-use proptest::prelude::*;
 use super::{ProjectAdd, ProjectType};
+use proptest::prelude::*;
 
 // Property test generators
 prop_compose! {

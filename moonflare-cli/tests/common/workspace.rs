@@ -3,7 +3,7 @@ use std::process::Command;
 use std::time::Instant;
 use tempfile::TempDir;
 
-use super::{log, run_command_with_timeout, ProjectType};
+use super::{ProjectType, log, run_command_with_timeout};
 
 // Test fixture that manages a temporary moonflare workspace
 pub struct MoonflareTestWorkspace {
@@ -68,7 +68,10 @@ impl MoonflareTestWorkspace {
         log(&format!("Initializing workspace with force: {}", name));
 
         let mut cmd = Command::new(&self.moonflare_binary);
-        cmd.arg("init").arg(name).arg("--force").current_dir(self.temp_dir.path());
+        cmd.arg("init")
+            .arg(name)
+            .arg("--force")
+            .current_dir(self.temp_dir.path());
 
         let output = run_command_with_timeout(cmd, 5)?;
 
@@ -79,7 +82,10 @@ impl MoonflareTestWorkspace {
             );
         }
 
-        log(&format!("Workspace initialized with force in {:?}", start.elapsed()));
+        log(&format!(
+            "Workspace initialized with force in {:?}",
+            start.elapsed()
+        ));
         Ok(())
     }
 
@@ -97,7 +103,11 @@ impl MoonflareTestWorkspace {
         }
 
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        log(&format!("Init failed as expected in {:?}: {}", start.elapsed(), stderr.lines().next().unwrap_or("Unknown error")));
+        log(&format!(
+            "Init failed as expected in {:?}: {}",
+            start.elapsed(),
+            stderr.lines().next().unwrap_or("Unknown error")
+        ));
         Ok(stderr)
     }
 
@@ -107,7 +117,12 @@ impl MoonflareTestWorkspace {
         Ok(subdir_path)
     }
 
-    pub fn create_file_in_directory(&self, dir: &Path, filename: &str, content: &str) -> anyhow::Result<()> {
+    pub fn create_file_in_directory(
+        &self,
+        dir: &Path,
+        filename: &str,
+        content: &str,
+    ) -> anyhow::Result<()> {
         let file_path = dir.join(filename);
         std::fs::write(file_path, content)?;
         Ok(())

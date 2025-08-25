@@ -1,6 +1,6 @@
+use crate::utils::{fs::is_moonflare_workspace, moon::run_moon_command};
 use anyhow::Result;
 use colored::*;
-use crate::utils::{moon::run_moon_command, fs::is_moonflare_workspace};
 
 pub struct DevCommand {}
 
@@ -16,9 +16,14 @@ impl DevCommand {
 
         match project {
             Some(proj) => {
-                println!("{}", format!("Starting development server for '{}'...", proj).cyan().bold());
+                println!(
+                    "{}",
+                    format!("Starting development server for '{}'...", proj)
+                        .cyan()
+                        .bold()
+                );
                 run_moon_command(&["run", &format!("{}:dev", proj)]).await?;
-            },
+            }
             None => {
                 println!("{}", "Starting all development servers...".cyan().bold());
                 run_moon_command(&[":dev"]).await?;

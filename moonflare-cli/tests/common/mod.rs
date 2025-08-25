@@ -1,22 +1,22 @@
 //! Common test utilities and shared infrastructure
-//! 
+//!
 //! This module contains shared code used across multiple test modules.
 //! Some items may appear unused in individual modules but are used by others.
 
 #![allow(unused_imports)] // Shared module - not all imports used in each test file
-#![allow(dead_code)]     // Shared utilities - not all functions used in each test file
+#![allow(dead_code)] // Shared utilities - not all functions used in each test file
 
 use std::io::{self, Read, Write};
 use std::process::Command;
 use std::time::{Duration, Instant};
 
-pub use workspace::*;
-pub use verification::*;
 pub use generators::*;
+pub use verification::*;
+pub use workspace::*;
 
-mod workspace;
-mod verification;
 mod generators;
+mod verification;
+mod workspace;
 
 // Helper function for real-time logging
 pub fn log(msg: &str) {

@@ -1,30 +1,28 @@
+use crate::errors::MoonflareError;
 use anyhow::{Result, bail};
-use which::which;
-use std::process::Command;
 use colored::*;
 use serde::{Deserialize, Serialize};
-use crate::errors::MoonflareError;
+use std::process::Command;
+use which::which;
 
 pub fn check_moon_installation() -> Result<()> {
     match which("moon") {
         Ok(_) => {
             println!("{}", "Moon CLI is installed".green());
             Ok(())
-        },
+        }
         Err(_) => {
             println!("{}", "Moon CLI not found".yellow());
             println!("Installing Moon via proto...");
-            
+
             // Try to install via proto
-            let output = Command::new("proto")
-                .args(["install", "moon"])
-                .output();
-                
+            let output = Command::new("proto").args(["install", "moon"]).output();
+
             match output {
                 Ok(result) if result.status.success() => {
                     println!("{}", "Moon CLI installed successfully".green());
                     Ok(())
-                },
+                }
                 _ => {
                     eprintln!("{}", "Failed to install Moon CLI".red());
                     eprintln!("Please install Moon manually:");
@@ -39,15 +37,17 @@ pub fn check_moon_installation() -> Result<()> {
 pub async fn run_moon_command(args: &[&str]) -> Result<()> {
     let mut cmd = Command::new("moon");
     cmd.args(args);
-    
+
     let status = cmd.status()?;
-    
+
     if status.success() {
         Ok(())
     } else {
-        bail!("Moon command '{}' failed with exit code: {:?}", 
-              args.join(" "), 
-              status.code());
+        bail!(
+            "Moon command '{}' failed with exit code: {:?}",
+            args.join(" "),
+            status.code()
+        );
     }
 }
 
@@ -55,16 +55,16 @@ pub async fn run_moon_command(args: &[&str]) -> Result<()> {
 pub async fn run_moon_command_with_error(args: &[&str]) -> std::result::Result<(), MoonflareError> {
     let mut cmd = Command::new("moon");
     cmd.args(args);
-    
+
     // Let Moon's stdout and stderr pass through directly to preserve colors and formatting
     let status = cmd.status().map_err(|e| {
         MoonflareError::moon_command_failed(
             &args.join(" "),
             &format!("Failed to execute moon command: {}", e),
-            None
+            None,
         )
     })?;
-    
+
     if status.success() {
         Ok(())
     } else {
@@ -73,7 +73,7 @@ pub async fn run_moon_command_with_error(args: &[&str]) -> std::result::Result<(
         Err(MoonflareError::moon_command_failed(
             &args.join(" "),
             "", // Empty stderr since Moon already printed to user
-            status.code()
+            status.code(),
         ))
     }
 }
@@ -87,9 +87,9 @@ pub async fn moon_setup() -> Result<()> {
 pub async fn run_moon_command_silent(args: &[&str]) -> Result<String> {
     let mut cmd = Command::new("moon");
     cmd.args(args);
-    
+
     let output = cmd.output()?;
-    
+
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
@@ -115,11 +115,11 @@ pub struct MoonProjectsResponse {
 // Query all available projects in the Moon workspace
 pub async fn query_projects() -> Result<Vec<MoonProject>> {
     let output = run_moon_command_silent(&["query", "projects", "--json"]).await?;
-    
+
     // Parse the JSON output
     let response: MoonProjectsResponse = serde_json::from_str(&output)
         .map_err(|e| anyhow::anyhow!("Failed to parse Moon projects response: {}", e))?;
-    
+
     Ok(response.projects)
 }
 
@@ -129,7 +129,7 @@ pub async fn validate_project_exists(project_name: &str) -> Result<Option<Vec<St
         Ok(projects) => {
             // Check if the project exists by ID
             let project_exists = projects.iter().any(|p| p.id == project_name);
-            
+
             if project_exists {
                 Ok(None) // Project exists, no error
             } else {
@@ -139,8 +139,8 @@ pub async fn validate_project_exists(project_name: &str) -> Result<Option<Vec<St
                     .map(|p| {
                         let stack_info = match p.stack.as_deref() {
                             Some("frontend") => " (frontend)",
-                            Some("backend") => " (backend)", 
-                            _ => ""
+                            Some("backend") => " (backend)",
+                            _ => "",
                         };
                         format!("{}{}", p.id, stack_info)
                     })
