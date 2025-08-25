@@ -51,13 +51,13 @@ pub async fn run_moon_command(args: &[&str]) -> Result<()> {
     }
 }
 
-// Run a Moon command and return a structured Moon error on failure
+// Run a Moon command with direct stdio passthrough for best UX
 pub async fn run_moon_command_with_error(args: &[&str]) -> std::result::Result<(), MoonflareError> {
     let mut cmd = Command::new("moon");
     cmd.args(args);
     
-    // Use output() to capture stderr for detailed error reporting
-    let output = cmd.output().map_err(|e| {
+    // Let Moon's stdout and stderr pass through directly to preserve colors and formatting
+    let status = cmd.status().map_err(|e| {
         MoonflareError::moon_command_failed(
             &args.join(" "),
             &format!("Failed to execute moon command: {}", e),
@@ -65,18 +65,15 @@ pub async fn run_moon_command_with_error(args: &[&str]) -> std::result::Result<(
         )
     })?;
     
-    if output.status.success() {
-        // Print stdout to preserve output for commands that need it
-        if !output.stdout.is_empty() {
-            print!("{}", String::from_utf8_lossy(&output.stdout));
-        }
+    if status.success() {
         Ok(())
     } else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        // Moon has already printed its error to stderr with full formatting
+        // Just return a simple error that indicates the command failed
         Err(MoonflareError::moon_command_failed(
             &args.join(" "),
-            &stderr,
-            output.status.code()
+            "", // Empty stderr since Moon already printed to user
+            status.code()
         ))
     }
 }

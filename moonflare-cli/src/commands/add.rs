@@ -1,10 +1,14 @@
+use crate::templates::{embedded, engine::TemplateEngine};
+use crate::utils::fs::{
+    add_crate_build_dependency_to_shared_wasm, add_wasm_dependency_to_project,
+    create_directory_if_not_exists, get_project_directory, get_typescript_projects, has_crates,
+    has_wasm_dependency, is_moonflare_workspace,
+};
 use anyhow::{Result, bail};
 use colored::*;
-use std::path::Path;
-use std::collections::HashMap;
 use serde_json::Value;
-use crate::templates::{embedded, engine::TemplateEngine};
-use crate::utils::fs::{create_directory_if_not_exists, is_moonflare_workspace, get_project_directory, has_crates, get_typescript_projects, add_wasm_dependency_to_project, has_wasm_dependency, add_crate_build_dependency_to_shared_wasm};
+use std::collections::HashMap;
+use std::path::Path;
 
 pub struct AddCommand {
     template_engine: TemplateEngine,
@@ -23,7 +27,12 @@ impl AddCommand {
             bail!("Not in a Moonflare workspace. Run 'moonflare init <name>' first.");
         }
 
-        println!("{}", format!("Adding {} project '{}'...", project_type, name).cyan().bold());
+        println!(
+            "{}",
+            format!("Adding {} project '{}'...", project_type, name)
+                .cyan()
+                .bold()
+        );
 
         // Get the appropriate directory for this project type
         let project_dir = get_project_directory(project_type);
@@ -45,25 +54,22 @@ impl AddCommand {
             "durable-object" => {
                 context.insert("name_upper".to_string(), Value::String(name.to_uppercase()));
                 context.insert("name_title".to_string(), Value::String(to_title_case(name)));
-            },
+            }
             _ => {}
         }
 
         // For TypeScript projects, check if we need WASM dependencies
         let is_typescript_project = matches!(project_type, "astro" | "react" | "durable-object");
         let should_add_wasm_deps = is_typescript_project && has_crates();
-        
+
         // Add WASM context if needed
         if should_add_wasm_deps {
             context.insert("has_wasm".to_string(), Value::Bool(true));
         }
 
         // Generate project files
-        self.template_engine.process_template_files(
-            template,
-            &target_path,
-            &context
-        )?;
+        self.template_engine
+            .process_template_files(template, &target_path, &context)?;
 
         // Handle special post-generation tasks
         match project_type {
@@ -72,36 +78,30 @@ impl AddCommand {
                 self.add_wasm_dependencies_to_existing_projects().await?;
                 // Update shared-wasm to depend on this new crate
                 self.add_crate_dependency_to_shared_wasm(name).await?;
-            },
+            }
             "astro" | "react" | "durable-object" => {
                 // WASM dependencies are handled by template context
-            },
+            }
             _ => {}
         }
 
-        println!("{}", format!("Successfully created {} project '{}'", project_type, name).green().bold());
+        println!(
+            "{}",
+            format!("Successfully created {} project '{}'", project_type, name)
+                .green()
+                .bold()
+        );
         println!();
         println!("{}", "Next steps:".yellow().bold());
         match project_type {
-            "astro" => {
-                println!("  cd {}/{}", project_dir, name);
-                println!("  pnpm install");
-                println!("  pnpm dev");
-            },
-            "react" => {
-                println!("  cd {}/{}", project_dir, name);
-                println!("  pnpm install");
-                println!("  pnpm dev");
-            },
-            "durable-object" => {
-                println!("  cd {}/{}", project_dir, name);
-                println!("  pnpm install");
-                println!("  pnpm dev");
-            },
+            "astro" | "react" | "durable-object" => {
+                println!("  moonflare dev");
+                println!("  moonflare build");
+                println!("  moonflare deploy");
+            }
             "crate" => {
-                println!("  cd {}/{}", project_dir, name);
-                println!("  cargo build --target wasm32-unknown-unknown --release");
-            },
+                println!("  moonflare build  # Build all projects to generate WASM");
+            }
             _ => {}
         }
 
@@ -111,18 +111,25 @@ impl AddCommand {
     async fn add_wasm_dependencies_to_existing_projects(&self) -> Result<()> {
         let typescript_projects = get_typescript_projects();
         let mut updated_count = 0;
-        
+
         for project_path in typescript_projects {
             if !has_wasm_dependency(&project_path) {
                 add_wasm_dependency_to_project(&project_path)?;
                 updated_count += 1;
             }
         }
-        
+
         if updated_count > 0 {
-            println!("{}", format!("Updated {} existing TypeScript project(s) to use WASM", updated_count).yellow());
+            println!(
+                "{}",
+                format!(
+                    "Updated {} existing TypeScript project(s) to use WASM",
+                    updated_count
+                )
+                .yellow()
+            );
         }
-        
+
         Ok(())
     }
 

@@ -83,15 +83,16 @@ pub enum MoonflareError {
         moon_output: Option<String>,
     },
 
-    #[error("Moon command failed")]
+    #[error("Moon command '{command}' failed: {main_error}")]
     #[diagnostic(
         code(moonflare::moon::command_failed),
-        help("Make sure Moon CLI is properly installed and the workspace is valid")
+        help("Moon has displayed the detailed error above. Check for syntax errors, missing dependencies, or invalid configuration.")
     )]
     MoonCommandFailed {
         command: String,
+        main_error: String,
         #[source_code]
-        stderr_output: NamedSource<String>,
+        stderr_output: Option<NamedSource<String>>,
         #[label("Error occurred here")]
         error_span: Option<SourceSpan>,
         exit_code: Option<i32>,
@@ -214,11 +215,21 @@ impl MoonflareError {
     }
 
     pub fn moon_command_failed(command: &str, stderr_output: &str, exit_code: Option<i32>) -> Self {
-        let stderr_source = NamedSource::new("moon_stderr", stderr_output.to_string());
-        let error_span = find_error_span(stderr_output);
+        // Extract the main error message from Moon's stderr
+        let main_error = extract_moon_main_error(stderr_output);
+        
+        // Only include stderr source code if there's actual content
+        let (stderr_source, error_span) = if stderr_output.trim().is_empty() {
+            (None, None)
+        } else {
+            let stderr_source = NamedSource::new("moon_stderr", stderr_output.to_string());
+            let error_span = find_error_span(stderr_output);
+            (Some(stderr_source), error_span)
+        };
         
         Self::MoonCommandFailed {
             command: command.to_string(),
+            main_error,
             stderr_output: stderr_source,
             error_span,
             exit_code,
@@ -261,6 +272,72 @@ fn find_error_span(output: &str) -> Option<SourceSpan> {
     }
     
     None
+}
+
+fn extract_moon_main_error(output: &str) -> String {
+    // If stderr is empty, Moon has already printed the error directly to the user
+    if output.trim().is_empty() {
+        return "See error details above".to_string();
+    }
+    
+    // Try to extract the most relevant error message from Moon's stderr
+    let lines: Vec<&str> = output.lines().collect();
+    
+    // Look for specific Moon error patterns
+    for line in &lines {
+        let trimmed = line.trim();
+        
+        // Skip empty lines and lines that are just formatting
+        if trimmed.is_empty() || trimmed.starts_with("│") || trimmed.starts_with("┌") || trimmed.starts_with("└") {
+            continue;
+        }
+        
+        // Look for error indicators
+        if trimmed.starts_with("error:") || trimmed.starts_with("Error:") || trimmed.starts_with("ERROR:") {
+            // Remove the "error:" prefix and return the message
+            let error_msg = trimmed
+                .strip_prefix("error:")
+                .or_else(|| trimmed.strip_prefix("Error:"))
+                .or_else(|| trimmed.strip_prefix("ERROR:"))
+                .unwrap_or(trimmed)
+                .trim();
+            
+            if !error_msg.is_empty() {
+                return error_msg.to_string();
+            }
+        }
+        
+        // Look for "Failed to" messages
+        if trimmed.starts_with("Failed to") || trimmed.starts_with("failed to") {
+            return trimmed.to_string();
+        }
+        
+        // Look for task-related errors
+        if trimmed.contains("task") && (trimmed.contains("failed") || trimmed.contains("error")) {
+            return trimmed.to_string();
+        }
+        
+        // Look for validation errors
+        if trimmed.contains("Invalid") || trimmed.contains("invalid") {
+            return trimmed.to_string();
+        }
+    }
+    
+    // If no specific error pattern found, try to get the first non-empty, meaningful line
+    for line in &lines {
+        let trimmed = line.trim();
+        if !trimmed.is_empty() 
+            && !trimmed.starts_with("│") 
+            && !trimmed.starts_with("┌") 
+            && !trimmed.starts_with("└")
+            && !trimmed.starts_with("╭")
+            && !trimmed.starts_with("╰") {
+            return trimmed.to_string();
+        }
+    }
+    
+    // Fallback to a generic message if we can't extract anything useful
+    "Command execution failed".to_string()
 }
 
 pub fn validate_workspace_name(name: &str) -> Result<(), MoonflareError> {

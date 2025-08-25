@@ -10,6 +10,20 @@ projects:
   sources:
     shared-wasm: "shared-wasm"
 
+FILE:.moon/tasks.yml
+$schema: "https://moonrepo.dev/schemas/tasks.json"
+
+tasks:
+  install:
+    description: 'Install dependencies'
+    command: 'pnpm'
+    args: ['install']
+    platform: 'node'
+    options:
+      runFromWorkspaceRoot: true
+    outputs:
+      - 'node_modules'
+
 FILE:.moon/toolchain.yml
 $schema: "https://moonrepo.dev/schemas/toolchain.json"
 

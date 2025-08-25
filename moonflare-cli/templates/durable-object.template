@@ -46,19 +46,24 @@ tasks:
       - "wrangler.*"{{#if has_wasm}}
       - '/shared-wasm/*.wasm'{{/if}}
     outputs:
-      - 'dist'{{#if has_wasm}}
-    deps:
+      - 'dist'
+    deps:{{#if has_wasm}}
       - 'shared-wasm:gather'{{/if}}
+      - '~:install'
 
   dev:
     command: 'pnpm'
     args: ['dev']
     local: true
+    deps:
+      - '~:install'
 
   deploy:
     command: 'pnpm'
     args: ['deploy']
     local: true
+    deps:
+      - 'build'
 
   lint:
     command: 'pnpm'
@@ -69,6 +74,8 @@ tasks:
       - "*.js"
       - "biome.json"
       - "package.json"
+    deps:
+      - '~:install'
 
   format:
     command: 'pnpm'
@@ -79,6 +86,8 @@ tasks:
       - "*.js"
       - "biome.json"
       - "package.json"
+    deps:
+      - '~:install'
 
   check:
     command: 'pnpm'
@@ -89,6 +98,8 @@ tasks:
       - "*.js"
       - "biome.json"
       - "package.json"
+    deps:
+      - '~:install'
 
 FILE:biome.json
 {
