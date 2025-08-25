@@ -66,8 +66,9 @@ fn test_init_dot_in_non_empty_directory_fails() -> anyhow::Result<()> {
     assert!(!output.status.success(), "Init should fail in non-empty directory");
     
     let stderr = String::from_utf8_lossy(&output.stderr);
+    let stderr_lower = stderr.to_lowercase();
     assert!(
-        stderr.contains("Directory is not empty") || stderr.contains("not empty"),
+        stderr_lower.contains("directory is not empty") || stderr_lower.contains("not empty"),
         "Error should mention non-empty directory, got: {}",
         stderr
     );

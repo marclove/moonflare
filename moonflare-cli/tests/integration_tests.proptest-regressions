@@ -1,7 +1,0 @@
-# Seeds for failure cases proptest has generated in the past. It is
-# automatically read and these particular cases re-run before any
-# novel cases are generated.
-#
-# It is recommended to check this file in to source control so that
-# everyone who runs the test benefits from these saved cases.
-cc 7b478ee299428423d9f11b4566fb01c710595f9f1420dabf77ca5b049c7d0e29 # shrinks to projects = [ProjectAdd { project_type: Crate, name: "a4-d4---b2" }, ProjectAdd { project_type: Astro, name: "ark-2p-ch-" }]

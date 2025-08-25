@@ -81,11 +81,11 @@ impl InitCommand {
                         .join(", ");
                     
                     let message = if entries.len() == 1 {
-                        format!("Directory '{}' contains 1 file: {}", dir_name, sample_files)
+                        format!("Directory is not empty. Directory '{}' contains 1 file: {}", dir_name, sample_files)
                     } else if entries.len() <= 3 {
-                        format!("Directory '{}' contains {} files: {}", dir_name, entries.len(), sample_files)
+                        format!("Directory is not empty. Directory '{}' contains {} files: {}", dir_name, entries.len(), sample_files)
                     } else {
-                        format!("Directory '{}' contains {} files including: {}", dir_name, entries.len(), sample_files)
+                        format!("Directory is not empty. Directory '{}' contains {} files including: {}", dir_name, entries.len(), sample_files)
                     };
                     
                     let init_command = if name == "." {
@@ -101,7 +101,7 @@ impl InitCommand {
                     ];
                     
                     self.ui.render_error(
-                        "Directory not empty",
+                        "Directory is not empty",
                         &message,
                         suggestions
                     ).map_err(|e| MoonflareError::file_system_error("UI render", target_dir.clone(), std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))).into_diagnostic()?;

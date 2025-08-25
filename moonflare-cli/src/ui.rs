@@ -177,7 +177,8 @@ impl MoonflareUI {
         message: &str,
         suggestions: Vec<&str>,
     ) -> Result<(), ConsoleError> {
-        self.console.render(element! {
+        // Render error messages to stderr
+        self.console.stderr().render(element! {
             Container {
                 Notice(variant: Variant::Failure, title: title.to_owned()) {
                     Text(content: message)
@@ -195,7 +196,7 @@ impl MoonflareUI {
                     }
                 }
             }
-        })
+        }, self.console.theme())
     }
 
     pub fn render_main_help(&self) -> Result<(), ConsoleError> {
