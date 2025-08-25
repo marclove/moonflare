@@ -1,12 +1,15 @@
 use clap::{Parser, Subcommand};
 use miette::Result;
+use std::env;
 
 mod commands;
 mod templates;
 mod utils;
 mod errors;
+mod ui;
 
 use commands::{init::InitCommand, add::AddCommand, build::BuildCommand, dev::DevCommand, deploy::DeployCommand};
+use ui::MoonflareUI;
 
 #[derive(Parser)]
 #[command(
@@ -64,6 +67,84 @@ enum Commands {
 async fn main() -> Result<()> {
     // Install miette panic and error hooks for better error reporting
     miette::set_panic_hook();
+    
+    let ui = MoonflareUI::new();
+    
+    // Check for help requests before parsing with clap
+    let args: Vec<String> = env::args().collect();
+    
+    // Handle main help
+    if args.len() == 1 || args.contains(&"--help".to_string()) || args.contains(&"-h".to_string()) {
+        if args.len() == 2 && (args[1] == "--help" || args[1] == "-h") {
+            ui.render_main_help().map_err(|e| miette::miette!("Failed to render help: {}", e))?;
+            return Ok(());
+        }
+    }
+    
+    // Handle subcommand help
+    if args.len() >= 3 && (args[2] == "--help" || args[2] == "-h") {
+        match args[1].as_str() {
+            "init" => {
+                ui.render_init_help().map_err(|e| miette::miette!("Failed to render help: {}", e))?;
+                return Ok(());
+            }
+            "add" => {
+                ui.render_add_help().map_err(|e| miette::miette!("Failed to render help: {}", e))?;
+                return Ok(());
+            }
+            "build" => {
+                ui.render_build_help().map_err(|e| miette::miette!("Failed to render help: {}", e))?;
+                return Ok(());
+            }
+            "dev" => {
+                ui.render_dev_help().map_err(|e| miette::miette!("Failed to render help: {}", e))?;
+                return Ok(());
+            }
+            "deploy" => {
+                ui.render_deploy_help().map_err(|e| miette::miette!("Failed to render help: {}", e))?;
+                return Ok(());
+            }
+            _ => {
+                // Fall back to clap for other commands
+            }
+        }
+    }
+    
+    // Handle standalone help command
+    if args.len() >= 2 && args[1] == "help" {
+        if args.len() == 2 {
+            // "moonflare help" - show main help
+            ui.render_main_help().map_err(|e| miette::miette!("Failed to render help: {}", e))?;
+            return Ok(());
+        } else if args.len() == 3 {
+            // "moonflare help <command>" - show command help
+            match args[2].as_str() {
+                "init" => {
+                    ui.render_init_help().map_err(|e| miette::miette!("Failed to render help: {}", e))?;
+                    return Ok(());
+                }
+                "add" => {
+                    ui.render_add_help().map_err(|e| miette::miette!("Failed to render help: {}", e))?;
+                    return Ok(());
+                }
+                "build" => {
+                    ui.render_build_help().map_err(|e| miette::miette!("Failed to render help: {}", e))?;
+                    return Ok(());
+                }
+                "dev" => {
+                    ui.render_dev_help().map_err(|e| miette::miette!("Failed to render help: {}", e))?;
+                    return Ok(());
+                }
+                "deploy" => {
+                    ui.render_deploy_help().map_err(|e| miette::miette!("Failed to render help: {}", e))?;
+                    return Ok(());
+                }
+                _ => {
+                    // Fall back to clap for other commands
+                }
+            }
+        }
+    }
     
     let cli = Cli::parse();
     

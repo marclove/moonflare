@@ -4,20 +4,22 @@ use crate::utils::fs::{
     create_directory_if_not_exists, get_project_directory, get_typescript_projects, has_crates,
     has_wasm_dependency, is_moonflare_workspace,
 };
+use crate::ui::MoonflareUI;
 use anyhow::{Result, bail};
-use colored::*;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::Path;
 
 pub struct AddCommand {
     template_engine: TemplateEngine,
+    ui: MoonflareUI,
 }
 
 impl AddCommand {
     pub fn new() -> Self {
         Self {
             template_engine: TemplateEngine::new(),
+            ui: MoonflareUI::new(),
         }
     }
 
@@ -27,12 +29,10 @@ impl AddCommand {
             bail!("Not in a Moonflare workspace. Run 'moonflare init <name>' first.");
         }
 
-        println!(
-            "{}",
-            format!("Adding {} project '{}'...", project_type, name)
-                .cyan()
-                .bold()
-        );
+        self.ui.render_header(
+            "Adding project", 
+            Some(&format!("Creating {} project '{}'", project_type, name))
+        ).map_err(|e| anyhow::anyhow!("UI render error: {}", e))?;
 
         // Get the appropriate directory for this project type
         let project_dir = get_project_directory(project_type);
@@ -85,25 +85,14 @@ impl AddCommand {
             _ => {}
         }
 
-        println!(
-            "{}",
-            format!("Successfully created {} project '{}'", project_type, name)
-                .green()
-                .bold()
-        );
-        println!();
-        println!("{}", "Next steps:".yellow().bold());
-        match project_type {
-            "astro" | "react" | "durable-object" => {
-                println!("  moonflare dev");
-                println!("  moonflare build");
-                println!("  moonflare deploy");
-            }
-            "crate" => {
-                println!("  moonflare build  # Build all projects to generate WASM");
-            }
-            _ => {}
-        }
+        self.ui.render_success(&format!(
+            "Successfully created {} project '{}'", 
+            project_type, 
+            name
+        )).map_err(|e| anyhow::anyhow!("UI render error: {}", e))?;
+        
+        self.ui.render_next_steps_for_project(name, project_type)
+            .map_err(|e| anyhow::anyhow!("UI render error: {}", e))?;
 
         Ok(())
     }
@@ -120,14 +109,14 @@ impl AddCommand {
         }
 
         if updated_count > 0 {
-            println!(
-                "{}",
-                format!(
-                    "Updated {} existing TypeScript project(s) to use WASM",
-                    updated_count
-                )
-                .yellow()
-            );
+            if let Ok(ui) = MoonflareUI::new().render_success(&format!(
+                "Updated {} existing TypeScript project(s) to use WASM",
+                updated_count
+            )) {
+                ui
+            } else {
+                println!("Updated {} existing TypeScript project(s) to use WASM", updated_count);
+            }
         }
 
         Ok(())
