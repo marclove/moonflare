@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Moonflare is a CLI utility for creating and managing Cloudflare-focused monorepos with excellent developer experience. The repository contains:
 
-- **`moonflare-cli/`** - The main Rust CLI binary that generates and manages monorepos
-- **`templates/`** - Legacy templates (kept for reference, now embedded in CLI)
+- **`src/`** - The main Rust CLI binary source code
+- **`templates/`** - Template files embedded in the CLI binary at compile time
 - **Generated monorepos** have this structure:
   - **`crates/`** - Rust libraries that compile to WebAssembly (WASM32 target)
   - **`apps/`** - React frontend applications with Vite
@@ -19,21 +19,21 @@ Moonflare is a CLI utility for creating and managing Cloudflare-focused monorepo
 
 The Moonflare CLI is built in Rust with modern error handling and beautiful UI:
 - **Clap** for command parsing and subcommand structure
-- **Miette** for enhanced error reporting with context and suggestions
+- **Miette** for enhanced error reporting with context and suggestions  
 - **Starbase** for beautiful CLI output with consistent formatting and colors
 - **Handlebars** for template processing with `convert_case` for string transformations
-- **Embedded templates** for all project types (Astro, React, Durable Objects, Rust crates)
+- **Embedded templates** for all project types (Astro, React, Durable Objects, Rust crates) in `templates/`
 - **Moon integration** for task orchestration and dependency management
-- **Cloudflare integration** via Wrangler CLI for deployment with environment support
+- **Cloudflare integration** via Wrangler CLI for deployment with environment support  
 - **Custom help system** that bypasses Clap to provide rich, formatted help output
 
 ## Common Commands
 
 ### CLI Development Commands
 - `cargo build --release` - Build the Moonflare CLI binary
-- `cargo test` - Run CLI tests
+- `cargo test` - Run CLI tests  
 - `cargo clippy` - Lint CLI code
-- `./moonflare-cli/target/release/moonflare --help` - Test CLI help
+- `./target/release/moonflare --help` - Test CLI help
 
 ### CLI Usage Commands
 - `moonflare init <name> [--path <path>] [--force]` - Initialize new Cloudflare monorepo
@@ -98,15 +98,15 @@ The Moonflare CLI is built in Rust with modern error handling and beautiful UI:
 ## Development Workflow
 
 ### Working on the CLI
-1. Make changes to Rust code in `moonflare-cli/src/`
+1. Make changes to Rust code in `src/`
 2. Test with `cargo check` and `cargo clippy`
-3. Build with `cargo build --release`
-4. Test CLI functionality with `./moonflare-cli/target/release/moonflare`
+3. Build with `cargo build --release`  
+4. Test CLI functionality with `./target/release/moonflare`
 
 ### CLI Template Development
-1. Templates are in `moonflare-cli/templates/*.template`
+1. Templates are in `templates/*.template`
 2. Use `FILE:` prefix for each file in template
-3. Use `{{variable}}` syntax for Handlebars substitution
+3. Use `{{variable}}` syntax for Handlebars substitution  
 4. Templates are embedded at compile time via `include_str!`
 
 ### Generated Monorepo Workflow (for end users)
