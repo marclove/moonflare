@@ -91,3 +91,6 @@ smoke-test-individual:
 smoke-test-deps:
     @echo "🔧 Testing dependency resolution..."
     @cargo test --test deployment_smoke_tests test_dependency_resolution -- --ignored
+
+copy-bin:
+    @sudo cp target/release/moonflare /usr/local/bin
