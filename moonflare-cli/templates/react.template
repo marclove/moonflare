@@ -37,9 +37,14 @@ layer: 'application'
 stack: 'frontend'
 
 tasks:
-  build:
+  build:{{#if has_wasm}}
+    script: |
+      pnpm build
+      # Copy WASM files to dist for Cloudflare deployment
+      mkdir -p dist
+      cp -f ../../shared-wasm/*.wasm dist/ 2>/dev/null || true{{else}}
     command: 'pnpm'
-    args: ['build']
+    args: ['build']{{/if}}
     inputs:
       - "public/**/*"
       - "src/**/*"

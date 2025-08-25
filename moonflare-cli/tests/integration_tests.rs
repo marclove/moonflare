@@ -1,7 +1,64 @@
 use proptest::prelude::*;
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{Duration, Instant};
 use tempfile::TempDir;
+
+// Helper function for real-time logging
+fn log(msg: &str) {
+    // Using stderr because stdout is buffered by test framework even with --nocapture
+    eprintln!("{}", msg);
+    io::stderr().flush().unwrap();
+}
+
+// Helper function to run command with timeout (no threading)
+fn run_command_with_timeout(
+    mut cmd: Command,
+    timeout_secs: u64,
+) -> anyhow::Result<std::process::Output> {
+    use std::process::Stdio;
+
+    let start = Instant::now();
+    let timeout = Duration::from_secs(timeout_secs);
+
+    let mut child = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
+
+    // Poll for completion with timeout
+    loop {
+        match child.try_wait()? {
+            Some(status) => {
+                let stdout = {
+                    let mut buf = Vec::new();
+                    if let Some(ref mut stdout) = child.stdout {
+                        stdout.read_to_end(&mut buf)?;
+                    }
+                    buf
+                };
+                let stderr = {
+                    let mut buf = Vec::new();
+                    if let Some(ref mut stderr) = child.stderr {
+                        stderr.read_to_end(&mut buf)?;
+                    }
+                    buf
+                };
+                return Ok(std::process::Output {
+                    status,
+                    stdout,
+                    stderr,
+                });
+            }
+            None => {
+                if start.elapsed() > timeout {
+                    // Kill the process
+                    let _ = child.kill();
+                    anyhow::bail!("Command timed out after {:?}", timeout);
+                }
+                std::thread::sleep(Duration::from_millis(100));
+            }
+        }
+    }
+}
 
 // Project types that can be added
 #[derive(Debug, Clone, PartialEq)]
@@ -86,11 +143,13 @@ impl MoonflareTestWorkspace {
     }
 
     fn init(&self, name: &str) -> anyhow::Result<()> {
-        let output = Command::new(&self.moonflare_binary)
-            .arg("init")
-            .arg(name)
-            .current_dir(self.temp_dir.path())
-            .output()?;
+        let start = Instant::now();
+        log(&format!("Initializing workspace: {}", name));
+
+        let mut cmd = Command::new(&self.moonflare_binary);
+        cmd.arg("init").arg(name).current_dir(self.temp_dir.path());
+
+        let output = run_command_with_timeout(cmd, 5)?;
 
         if !output.status.success() {
             anyhow::bail!(
@@ -99,6 +158,7 @@ impl MoonflareTestWorkspace {
             );
         }
 
+        log(&format!("Workspace initialized in {:?}", start.elapsed()));
         Ok(())
     }
 
@@ -108,12 +168,20 @@ impl MoonflareTestWorkspace {
         project_type: &ProjectType,
         project_name: &str,
     ) -> anyhow::Result<()> {
-        let output = Command::new(&self.moonflare_binary)
-            .arg("add")
+        let start = Instant::now();
+        log(&format!(
+            "Adding {} project: {}",
+            project_type.as_str(),
+            project_name
+        ));
+
+        let mut cmd = Command::new(&self.moonflare_binary);
+        cmd.arg("add")
             .arg(project_type.as_str())
             .arg(project_name)
-            .current_dir(self.temp_dir.path().join(workspace_name))
-            .output()?;
+            .current_dir(self.temp_dir.path().join(workspace_name));
+
+        let output = run_command_with_timeout(cmd, 5)?;
 
         if !output.status.success() {
             anyhow::bail!(
@@ -124,22 +192,41 @@ impl MoonflareTestWorkspace {
             );
         }
 
+        log(&format!(
+            "Added {} project in {:?}",
+            project_type.as_str(),
+            start.elapsed()
+        ));
         Ok(())
     }
 
     fn build(&self, workspace_name: &str) -> anyhow::Result<()> {
-        let output = Command::new(&self.moonflare_binary)
-            .arg("build")
-            .current_dir(self.temp_dir.path().join(workspace_name))
-            .output()?;
+        let start = Instant::now();
+        log(&format!("Building workspace '{}'", workspace_name));
+
+        let mut cmd = Command::new(&self.moonflare_binary);
+        cmd.arg("build")
+            .current_dir(self.temp_dir.path().join(workspace_name));
+
+        let output = run_command_with_timeout(cmd, 45)?;
 
         if !output.status.success() {
+            log(&format!("Build failed after {:?}", start.elapsed()));
+            log(&format!(
+                "STDOUT: {}",
+                String::from_utf8_lossy(&output.stdout)
+            ));
+            log(&format!(
+                "STDERR: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ));
             anyhow::bail!(
                 "Failed to build workspace: {}",
                 String::from_utf8_lossy(&output.stderr)
             );
         }
 
+        log(&format!("Build completed in {:?}", start.elapsed()));
         Ok(())
     }
 }
@@ -153,12 +240,23 @@ impl MoonflareTestWorkspace {
         project_name: &str,
         should_have_deps: bool,
     ) -> anyhow::Result<()> {
+        log(&format!(
+            "Verifying WASM dependencies for {} project (expected: {})",
+            project_type.as_str(),
+            should_have_deps
+        ));
+
         let moon_yml_path = self
             .path()
             .join(workspace_name)
             .join(project_type.directory())
             .join(project_name)
             .join("moon.yml");
+
+        // Fast-fail if file doesn't exist
+        if !moon_yml_path.exists() {
+            anyhow::bail!("moon.yml not found at {:?}", moon_yml_path);
+        }
 
         let content = std::fs::read_to_string(&moon_yml_path)?;
         let config: serde_yaml::Value = serde_yaml::from_str(&content)?;
@@ -202,6 +300,7 @@ impl MoonflareTestWorkspace {
                     project_name
                 );
             }
+            log("Project correctly has WASM dependencies");
         } else {
             if has_wasm_deps {
                 anyhow::bail!(
@@ -215,6 +314,7 @@ impl MoonflareTestWorkspace {
                     project_name
                 );
             }
+            log("Project correctly has no WASM dependencies");
         }
 
         Ok(())
@@ -225,11 +325,24 @@ impl MoonflareTestWorkspace {
         workspace_name: &str,
         crate_names: &[String],
     ) -> anyhow::Result<()> {
+        log(&format!(
+            "Verifying shared-wasm dependencies: {:?}",
+            crate_names
+        ));
+
         let shared_wasm_moon_yml = self
             .path()
             .join(workspace_name)
             .join("shared-wasm")
             .join("moon.yml");
+
+        // Fast-fail if file doesn't exist
+        if !shared_wasm_moon_yml.exists() {
+            anyhow::bail!(
+                "shared-wasm/moon.yml not found at {:?}",
+                shared_wasm_moon_yml
+            );
+        }
 
         let content = std::fs::read_to_string(&shared_wasm_moon_yml)?;
         let config: serde_yaml::Value = serde_yaml::from_str(&content)?;
@@ -253,6 +366,10 @@ impl MoonflareTestWorkspace {
             }
         }
 
+        log(&format!(
+            "Verified {} shared-wasm dependencies",
+            crate_names.len()
+        ));
         Ok(())
     }
 
@@ -261,19 +378,85 @@ impl MoonflareTestWorkspace {
         workspace_name: &str,
         crate_names: &[String],
     ) -> anyhow::Result<()> {
+        log(&format!(
+            "Verifying WASM files in shared-wasm: {:?}",
+            crate_names
+        ));
         let shared_wasm_dir = self.path().join(workspace_name).join("shared-wasm");
+
+        // Fast-fail if directory doesn't exist
+        if !shared_wasm_dir.exists() {
+            anyhow::bail!("shared-wasm directory not found at {:?}", shared_wasm_dir);
+        }
 
         for crate_name in crate_names {
             // Rust converts dashes to underscores in WASM filenames
             let wasm_filename = crate_name.replace('-', "_");
             let wasm_file = shared_wasm_dir.join(format!("{}.wasm", wasm_filename));
             if !wasm_file.exists() {
+                log(&format!("Missing WASM file: {:?}", wasm_file));
                 anyhow::bail!(
                     "WASM file for crate {} should exist at {:?} but doesn't",
                     crate_name,
                     wasm_file
                 );
             }
+            log(&format!("Found WASM file: {}.wasm", wasm_filename));
+        }
+
+        Ok(())
+    }
+
+    fn verify_wasm_files_in_typescript_dist(
+        &self,
+        workspace_name: &str,
+        project_type: &ProjectType,
+        project_name: &str,
+        crate_names: &[String],
+    ) -> anyhow::Result<()> {
+        log(&format!(
+            "Verifying WASM files in {} project dist: {:?}",
+            project_type.as_str(),
+            crate_names
+        ));
+
+        let dist_dir = self
+            .path()
+            .join(workspace_name)
+            .join(project_type.directory())
+            .join(project_name)
+            .join("dist");
+
+        // Fast-fail if dist directory doesn't exist
+        if !dist_dir.exists() {
+            log(&format!("Missing dist directory: {:?}", dist_dir));
+            anyhow::bail!(
+                "Dist directory for {} project {} should exist at {:?} but doesn't",
+                project_type.as_str(),
+                project_name,
+                dist_dir
+            );
+        }
+
+        for crate_name in crate_names {
+            // Rust converts dashes to underscores in WASM filenames
+            let wasm_filename = crate_name.replace('-', "_");
+            let wasm_file = dist_dir.join(format!("{}.wasm", wasm_filename));
+            if !wasm_file.exists() {
+                log(&format!("Missing WASM file in dist: {:?}", wasm_file));
+                anyhow::bail!(
+                    "WASM file for crate {} should exist in {} project {} dist at {:?} but doesn't",
+                    crate_name,
+                    project_type.as_str(),
+                    project_name,
+                    wasm_file
+                );
+            }
+            log(&format!(
+                "Found WASM file in {} dist: {}.wasm",
+                project_type.as_str(),
+                wasm_filename
+            ));
         }
 
         Ok(())
@@ -338,20 +521,36 @@ mod tests {
 
     #[test]
     fn test_basic_workspace_creation() -> anyhow::Result<()> {
+        log("→ Basic Workspace Creation");
         let workspace = MoonflareTestWorkspace::new()?;
         workspace.init("test-workspace")?;
 
+        log("Verifying workspace structure");
         // Verify workspace structure exists
         let workspace_path = workspace.path().join("test-workspace");
-        assert!(workspace_path.join(".moon").exists());
-        assert!(workspace_path.join("package.json").exists());
-        assert!(workspace_path.join("shared-wasm").exists());
 
+        let moon_dir = workspace_path.join(".moon");
+        if !moon_dir.exists() {
+            anyhow::bail!(".moon directory missing at {:?}", moon_dir);
+        }
+
+        let package_json = workspace_path.join("package.json");
+        if !package_json.exists() {
+            anyhow::bail!("package.json missing at {:?}", package_json);
+        }
+
+        let shared_wasm = workspace_path.join("shared-wasm");
+        if !shared_wasm.exists() {
+            anyhow::bail!("shared-wasm directory missing at {:?}", shared_wasm);
+        }
+
+        log("All workspace structure verified");
         Ok(())
     }
 
     #[test]
     fn test_typescript_project_without_crates() -> anyhow::Result<()> {
+        log("→ TypeScript Project Without Crates");
         let workspace = MoonflareTestWorkspace::new()?;
         workspace.init("test-workspace")?;
 
@@ -367,12 +566,14 @@ mod tests {
 
         // Should build successfully
         workspace.build("test-workspace")?;
+        log("Test completed");
 
         Ok(())
     }
 
     #[test]
     fn test_crate_then_typescript() -> anyhow::Result<()> {
+        log("→ Crate Then TypeScript");
         let workspace = MoonflareTestWorkspace::new()?;
         workspace.init("test-workspace")?;
 
@@ -403,11 +604,21 @@ mod tests {
         workspace.build("test-workspace")?;
         workspace.verify_wasm_files_exist("test-workspace", &["math".to_string()])?;
 
+        // Verify WASM files are copied to TypeScript project dist
+        workspace.verify_wasm_files_in_typescript_dist(
+            "test-workspace",
+            &ProjectType::Astro,
+            "dashboard",
+            &["math".to_string()],
+        )?;
+
+        log("Test completed");
         Ok(())
     }
 
     #[test]
     fn test_typescript_after_crates_exist() -> anyhow::Result<()> {
+        log("→ TypeScript After Crates Exist");
         let workspace = MoonflareTestWorkspace::new()?;
         workspace.init("test-workspace")?;
 
@@ -426,15 +637,76 @@ mod tests {
 
         workspace.verify_shared_wasm_has_crate_deps("test-workspace", &["utils".to_string()])?;
 
+        // Build and verify WASM files are distributed to TypeScript projects
+        workspace.build("test-workspace")?;
+        workspace.verify_wasm_files_exist("test-workspace", &["utils".to_string()])?;
+        workspace.verify_wasm_files_in_typescript_dist(
+            "test-workspace",
+            &ProjectType::DurableObject,
+            "api",
+            &["utils".to_string()],
+        )?;
+
+        log("Test completed");
+        Ok(())
+    }
+
+    #[test]
+    fn test_wasm_distribution_to_multiple_typescript_projects() -> anyhow::Result<()> {
+        log("→ WASM Distribution to Multiple TypeScript Projects");
+        let workspace = MoonflareTestWorkspace::new()?;
+        workspace.init("test-workspace")?;
+
+        // Add multiple TypeScript projects
+        workspace.add_project("test-workspace", &ProjectType::Astro, "site")?;
+        workspace.add_project("test-workspace", &ProjectType::React, "app")?;
+        workspace.add_project("test-workspace", &ProjectType::DurableObject, "worker")?;
+
+        // Add multiple crates
+        workspace.add_project("test-workspace", &ProjectType::Crate, "math-utils")?;
+        workspace.add_project("test-workspace", &ProjectType::Crate, "crypto-lib")?;
+
+        // Build everything
+        workspace.build("test-workspace")?;
+
+        let crate_names = vec!["math-utils".to_string(), "crypto-lib".to_string()];
+
+        // Verify WASM files exist in shared-wasm
+        workspace.verify_wasm_files_exist("test-workspace", &crate_names)?;
+
+        // Verify WASM files are distributed to ALL TypeScript projects
+        workspace.verify_wasm_files_in_typescript_dist(
+            "test-workspace",
+            &ProjectType::Astro,
+            "site",
+            &crate_names,
+        )?;
+
+        workspace.verify_wasm_files_in_typescript_dist(
+            "test-workspace",
+            &ProjectType::React,
+            "app",
+            &crate_names,
+        )?;
+
+        workspace.verify_wasm_files_in_typescript_dist(
+            "test-workspace",
+            &ProjectType::DurableObject,
+            "worker",
+            &crate_names,
+        )?;
+
+        log("Test completed");
         Ok(())
     }
 
     proptest! {
-        #![proptest_config(ProptestConfig::with_cases(3))]
+        #![proptest_config(ProptestConfig { cases: 3, max_global_rejects: 1000, ..ProptestConfig::default() })]
         #[test]
         fn test_property_based_project_sequences(
             projects in arb_project_sequence()
         ) {
+            log(&format!("→ Project Sequences ({} projects)", projects.len()));
             let workspace = MoonflareTestWorkspace::new().unwrap();
             workspace.init("test-workspace").unwrap();
 
@@ -474,7 +746,19 @@ mod tests {
             // If we have crates AND TypeScript projects, verify WASM files exist
             if !crates_added.is_empty() && !typescript_projects.is_empty() {
                 workspace.verify_wasm_files_exist("test-workspace", &crates_added).unwrap();
+
+                // Also verify WASM files are in each TypeScript project's dist
+                for ts_project in &typescript_projects {
+                    workspace.verify_wasm_files_in_typescript_dist(
+                        "test-workspace",
+                        &ts_project.project_type,
+                        &ts_project.name,
+                        &crates_added
+                    ).unwrap();
+                }
             }
+
+            log("Property test completed");
         }
     }
 }

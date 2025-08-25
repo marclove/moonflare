@@ -124,6 +124,16 @@ pub fn add_wasm_dependency_to_project(project_path: &Path) -> Result<()> {
                         Value::Sequence(inputs)
                     );
                 }
+                
+                // Replace command/args with script that copies WASM files
+                build_mapping.remove(&Value::String("command".to_string()));
+                build_mapping.remove(&Value::String("args".to_string()));
+                
+                let script = "pnpm build\n# Copy WASM files to dist for Cloudflare deployment\nmkdir -p dist\ncp -f ../../shared-wasm/*.wasm dist/ 2>/dev/null || true";
+                build_mapping.insert(
+                    Value::String("script".to_string()),
+                    Value::String(script.to_string())
+                );
             }
         }
     }
