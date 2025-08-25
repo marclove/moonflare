@@ -1,7 +1,7 @@
 use miette::{Result, IntoDiagnostic};
 use colored::*;
 use std::env;
-use crate::utils::{moon::{run_moon_command, validate_project_exists}, fs::is_moonflare_workspace};
+use crate::utils::{moon::{run_moon_command_with_error, validate_project_exists}, fs::is_moonflare_workspace};
 use crate::errors::MoonflareError;
 
 pub struct BuildCommand {}
@@ -20,7 +20,7 @@ impl BuildCommand {
 
         match project {
             Some(proj) => {
-                println!("{}", format!("🔨 Building project '{}'...", proj).cyan().bold());
+                println!("{}", format!("Building project '{}'...", proj).cyan().bold());
                 
                 // Check if the project exists by querying Moon for available projects
                 match validate_project_exists(proj).await {
@@ -50,33 +50,22 @@ impl BuildCommand {
                     }
                 }
                 
-                // Run the actual build command
-                match run_moon_command(&["run", &format!("{}:build", proj)]).await {
-                    Ok(_) => {},
-                    Err(e) => {
-                        let error_msg = e.to_string();
-                        return Err(MoonflareError::build_failed(
-                            Some(proj.to_string()), 
-                            &error_msg, 
-                            None
-                        )).into_diagnostic();
-                    }
+                // Run the actual build command with structured error handling
+                if let Err(moon_error) = run_moon_command_with_error(&["run", &format!("{}:build", proj)]).await {
+                    return Err(moon_error).into_diagnostic();
                 }
             },
             None => {
-                println!("{}", "🔨 Building all projects...".cyan().bold());
+                println!("{}", "Building all projects...".cyan().bold());
                 
-                match run_moon_command(&[":build"]).await {
-                    Ok(_) => {},
-                    Err(e) => {
-                        let error_msg = e.to_string();
-                        return Err(MoonflareError::build_failed(None, &error_msg, None)).into_diagnostic();
-                    }
+                // Run build all with structured error handling
+                if let Err(moon_error) = run_moon_command_with_error(&[":build"]).await {
+                    return Err(moon_error).into_diagnostic();
                 }
             }
         }
 
-        println!("✅ {}", "Build completed successfully!".green().bold());
+        println!("{}", "Build completed successfully!".green().bold());
         Ok(())
     }
 }

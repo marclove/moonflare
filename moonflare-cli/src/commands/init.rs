@@ -19,7 +19,7 @@ impl InitCommand {
     }
 
     pub async fn execute(&self, name: &str, path: Option<&str>) -> Result<()> {
-        println!("{}", "🚀 Initializing new Moonflare monorepo...".cyan().bold());
+        println!("{}", "Initializing new Moonflare monorepo...".cyan().bold());
 
         // Validate workspace name
         validate_workspace_name(name).into_diagnostic()?;
@@ -107,7 +107,7 @@ impl InitCommand {
         }
 
         // Run moon setup in the new workspace
-        println!("{}", "🔧 Initializing Moon workspace...".blue());
+        println!("{}", "Initializing Moon workspace...".blue());
         let current_dir = std::env::current_dir()
             .map_err(|e| MoonflareError::file_system_error("get current directory", std::env::current_dir().unwrap_or_default(), e))
             .into_diagnostic()?;
@@ -117,17 +117,17 @@ impl InitCommand {
             .into_diagnostic()?;
         
         match moon_setup().await {
-            Ok(_) => println!("✅ {}", "Moon workspace initialized".green()),
+            Ok(_) => println!("{}", "Moon workspace initialized".green()),
             Err(e) => {
                 // Restore directory before potentially returning error
                 let _ = std::env::set_current_dir(&current_dir);
                 
-                // For now, just warn about Moon setup failure rather than failing entirely
-                println!("⚠️  {}", format!("Moon setup failed: {}", e).yellow());
-                println!("You can run 'moon setup' manually later.");
-                
-                // Uncomment this line if you want Moon setup failure to be fatal:
-                // return Err(MoonflareError::moon_setup_failed(target_dir, Box::new(e), None));
+                // Use proper Moon setup error for better diagnostics
+                return Err(MoonflareError::moon_setup_failed(
+                    target_dir.clone(), 
+                    Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())), 
+                    None
+                )).into_diagnostic();
             }
         }
         
@@ -136,7 +136,7 @@ impl InitCommand {
             .map_err(|e| MoonflareError::file_system_error("restore directory", current_dir.clone(), e))
             .into_diagnostic()?;
 
-        println!("✅ {}", format!("Successfully created {} monorepo!", name).green().bold());
+        println!("{}", format!("Successfully created {} monorepo!", name).green().bold());
         println!();
         println!("{}", "Next steps:".yellow().bold());
         println!("  cd {}", name);

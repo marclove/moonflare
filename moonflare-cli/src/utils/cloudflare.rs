@@ -6,11 +6,11 @@ use colored::*;
 pub fn check_wrangler_installation() -> Result<()> {
     match which("wrangler") {
         Ok(_) => {
-            println!("✅ {}", "Wrangler CLI is installed".green());
+            println!("{}", "Wrangler CLI is installed".green());
             Ok(())
         },
         Err(_) => {
-            println!("⚠️  {}", "Wrangler CLI not found".yellow());
+            println!("{}", "Wrangler CLI not found".yellow());
             println!("Please install Wrangler:");
             println!("  npm install -g wrangler");
             bail!("Wrangler CLI installation required");
@@ -33,7 +33,7 @@ pub async fn deploy_project(project_path: &str, env: Option<&str>) -> Result<()>
         .output()?;
     
     if output.status.success() {
-        println!("✅ {}", "Deployment successful!".green());
+        println!("{}", "Deployment successful!".green());
         if !output.stdout.is_empty() {
             println!("{}", String::from_utf8_lossy(&output.stdout));
         }

@@ -23,7 +23,7 @@ impl AddCommand {
             bail!("Not in a Moonflare workspace. Run 'moonflare init <name>' first.");
         }
 
-        println!("{}", format!("🔨 Adding {} project '{}'...", project_type, name).cyan().bold());
+        println!("{}", format!("Adding {} project '{}'...", project_type, name).cyan().bold());
 
         // Get the appropriate directory for this project type
         let project_dir = get_project_directory(project_type);
@@ -79,7 +79,7 @@ impl AddCommand {
             _ => {}
         }
 
-        println!("✅ {}", format!("Successfully created {} project '{}'", project_type, name).green().bold());
+        println!("{}", format!("Successfully created {} project '{}'", project_type, name).green().bold());
         println!();
         println!("{}", "Next steps:".yellow().bold());
         match project_type {
@@ -120,7 +120,7 @@ impl AddCommand {
         }
         
         if updated_count > 0 {
-            println!("{}", format!("📝 Updated {} existing TypeScript project(s) to use WASM", updated_count).yellow());
+            println!("{}", format!("Updated {} existing TypeScript project(s) to use WASM", updated_count).yellow());
         }
         
         Ok(())

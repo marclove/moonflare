@@ -17,7 +17,7 @@ impl DeployCommand {
 
         match project {
             Some(proj) => {
-                println!("{}", format!("🚀 Deploying project '{}'...", proj).cyan().bold());
+                println!("{}", format!("Deploying project '{}'...", proj).cyan().bold());
                 
                 // Try to find the project in different directories
                 let possible_paths = [
@@ -33,7 +33,7 @@ impl DeployCommand {
                 deploy_project(project_path, env).await?;
             },
             None => {
-                println!("{}", "🚀 Deploying all deployable projects...".cyan().bold());
+                println!("{}", "Deploying all deployable projects...".cyan().bold());
                 
                 // Deploy all projects that have wrangler.toml
                 let dirs = ["workers", "sites", "apps"];
@@ -53,7 +53,7 @@ impl DeployCommand {
             }
         }
 
-        println!("✅ {}", "Deployment completed successfully!".green().bold());
+        println!("{}", "Deployment completed successfully!".green().bold());
         Ok(())
     }
 }

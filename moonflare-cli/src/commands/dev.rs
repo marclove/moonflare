@@ -16,11 +16,11 @@ impl DevCommand {
 
         match project {
             Some(proj) => {
-                println!("{}", format!("🚀 Starting development server for '{}'...", proj).cyan().bold());
+                println!("{}", format!("Starting development server for '{}'...", proj).cyan().bold());
                 run_moon_command(&["run", &format!("{}:dev", proj)]).await?;
             },
             None => {
-                println!("{}", "🚀 Starting all development servers...".cyan().bold());
+                println!("{}", "Starting all development servers...".cyan().bold());
                 run_moon_command(&[":dev"]).await?;
             }
         }

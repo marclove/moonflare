@@ -72,6 +72,20 @@ pub enum MoonflareError {
         moon_output: Option<String>,
     },
 
+    #[error("Moon command failed")]
+    #[diagnostic(
+        code(moonflare::moon::command_failed),
+        help("Make sure Moon CLI is properly installed and the workspace is valid")
+    )]
+    MoonCommandFailed {
+        command: String,
+        #[source_code]
+        stderr_output: NamedSource<String>,
+        #[label("Error occurred here")]
+        error_span: Option<SourceSpan>,
+        exit_code: Option<i32>,
+    },
+
     #[error("Not in a Moonflare workspace")]
     #[diagnostic(
         code(moonflare::build::not_in_workspace),
@@ -93,33 +107,7 @@ pub enum MoonflareError {
         available_projects: Option<String>,
     },
 
-    #[error("Build failed")]
-    #[diagnostic(
-        code(moonflare::build::build_failed),
-        help("Check the build output above for specific error details")
-    )]
-    BuildFailed {
-        project: Option<String>,
-        #[source_code]
-        build_output: NamedSource<String>,
-        #[label("Build failed here")]
-        error_span: Option<SourceSpan>,
-        exit_code: Option<i32>,
-    },
 
-    #[error("Moon command failed")]
-    #[diagnostic(
-        code(moonflare::moon::command_failed),
-        help("Make sure Moon CLI is properly installed and the workspace is valid")
-    )]
-    MoonCommandFailed {
-        command: String,
-        #[source_code]
-        stderr_output: NamedSource<String>,
-        #[label("Error occurred here")]
-        error_span: Option<SourceSpan>,
-        exit_code: Option<i32>,
-    },
 
     #[error("File system error")]
     #[diagnostic(
@@ -174,13 +162,6 @@ impl MoonflareError {
         }
     }
 
-    pub fn moon_setup_failed(workspace_path: PathBuf, source: Box<dyn std::error::Error + Send + Sync>, moon_output: Option<String>) -> Self {
-        Self::MoonSetupFailed {
-            workspace_path: workspace_path.display().to_string(),
-            source,
-            moon_output,
-        }
-    }
 
     pub fn not_in_workspace(current_dir: PathBuf, searched_paths: Vec<PathBuf>) -> Self {
         Self::NotInWorkspace {
@@ -197,22 +178,12 @@ impl MoonflareError {
         }
     }
 
-    pub fn build_failed(project: Option<String>, build_output: &str, exit_code: Option<i32>) -> Self {
-        let source_name = match &project {
-            Some(p) => format!("{}_build_output", p),
-            None => "build_output".to_string(),
-        };
-        
-        let build_source = NamedSource::new(source_name, build_output.to_string());
-        
-        // Try to find error patterns in the output for better highlighting
-        let error_span = find_error_span(build_output);
-        
-        Self::BuildFailed {
-            project,
-            build_output: build_source,
-            error_span,
-            exit_code,
+
+    pub fn moon_setup_failed(workspace_path: PathBuf, source: Box<dyn std::error::Error + Send + Sync>, moon_output: Option<String>) -> Self {
+        Self::MoonSetupFailed {
+            workspace_path: workspace_path.display().to_string(),
+            source,
+            moon_output,
         }
     }
 

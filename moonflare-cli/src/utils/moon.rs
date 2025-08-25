@@ -3,15 +3,16 @@ use which::which;
 use std::process::Command;
 use colored::*;
 use serde::{Deserialize, Serialize};
+use crate::errors::MoonflareError;
 
 pub fn check_moon_installation() -> Result<()> {
     match which("moon") {
         Ok(_) => {
-            println!("✅ {}", "Moon CLI is installed".green());
+            println!("{}", "Moon CLI is installed".green());
             Ok(())
         },
         Err(_) => {
-            println!("⚠️  {}", "Moon CLI not found".yellow());
+            println!("{}", "Moon CLI not found".yellow());
             println!("Installing Moon via proto...");
             
             // Try to install via proto
@@ -21,11 +22,11 @@ pub fn check_moon_installation() -> Result<()> {
                 
             match output {
                 Ok(result) if result.status.success() => {
-                    println!("✅ {}", "Moon CLI installed successfully".green());
+                    println!("{}", "Moon CLI installed successfully".green());
                     Ok(())
                 },
                 _ => {
-                    eprintln!("❌ {}", "Failed to install Moon CLI".red());
+                    eprintln!("{}", "Failed to install Moon CLI".red());
                     eprintln!("Please install Moon manually:");
                     eprintln!("  curl -fsSL https://moonrepo.dev/install/moon.sh | bash");
                     bail!("Moon CLI installation required");
@@ -39,16 +40,44 @@ pub async fn run_moon_command(args: &[&str]) -> Result<()> {
     let mut cmd = Command::new("moon");
     cmd.args(args);
     
-    let output = cmd.output()?;
+    let status = cmd.status()?;
+    
+    if status.success() {
+        Ok(())
+    } else {
+        bail!("Moon command '{}' failed with exit code: {:?}", 
+              args.join(" "), 
+              status.code());
+    }
+}
+
+// Run a Moon command and return a structured Moon error on failure
+pub async fn run_moon_command_with_error(args: &[&str]) -> std::result::Result<(), MoonflareError> {
+    let mut cmd = Command::new("moon");
+    cmd.args(args);
+    
+    // Use output() to capture stderr for detailed error reporting
+    let output = cmd.output().map_err(|e| {
+        MoonflareError::moon_command_failed(
+            &args.join(" "),
+            &format!("Failed to execute moon command: {}", e),
+            None
+        )
+    })?;
     
     if output.status.success() {
+        // Print stdout to preserve output for commands that need it
         if !output.stdout.is_empty() {
-            println!("{}", String::from_utf8_lossy(&output.stdout));
+            print!("{}", String::from_utf8_lossy(&output.stdout));
         }
         Ok(())
     } else {
-        let error = String::from_utf8_lossy(&output.stderr);
-        bail!("Moon command failed: {}", error);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(MoonflareError::moon_command_failed(
+            &args.join(" "),
+            &stderr,
+            output.status.code()
+        ))
     }
 }
 
