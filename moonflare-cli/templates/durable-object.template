@@ -1,0 +1,198 @@
+FILE:package.json
+{
+  "name": "{{name}}",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "tsc && wrangler deploy --dry-run",
+    "deploy": "wrangler deploy",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "check": "biome check ."
+  },
+  "dependencies": {
+    "@cloudflare/workers-types": "^4.20241218.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "typescript": "^5.8.0",
+    "wrangler": "^4.21.0"
+  }
+}
+
+FILE:moon.yml
+$schema: 'https://moonrepo.dev/schemas/project.json'
+language: 'typescript'
+layer: 'application'
+stack: 'backend'
+
+tasks:
+  build:
+    command: 'pnpm'
+    args: ['build']
+    inputs:
+      - 'src/**/*'
+      - 'index.html'
+      - "package.json"
+      - "tsconfig.*"
+      - "worker-configuration.d.ts"
+      - "wrangler.*"
+      - '/shared-wasm/*.wasm'
+    outputs:
+      - 'dist'
+    deps:
+      - 'shared-wasm:gather'
+
+  dev:
+    command: 'pnpm'
+    args: ['dev']
+    local: true
+
+  deploy:
+    command: 'pnpm'
+    args: ['deploy']
+    local: true
+
+  lint:
+    command: 'pnpm'
+    args: ['biome', 'lint', '.']
+    inputs:
+      - "src/**/*"
+      - "*.ts"
+      - "*.js"
+      - "biome.json"
+      - "package.json"
+
+  format:
+    command: 'pnpm'
+    args: ['biome', 'format', '--write', '.']
+    inputs:
+      - "src/**/*"
+      - "*.ts"
+      - "*.js"
+      - "biome.json"
+      - "package.json"
+
+  check:
+    command: 'pnpm'
+    args: ['biome', 'check', '.']
+    inputs:
+      - "src/**/*"
+      - "*.ts"
+      - "*.js"
+      - "biome.json"
+      - "package.json"
+
+FILE:biome.json
+{
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true
+    }
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 80,
+    "ignore": ["dist/**"]
+  }
+}
+
+FILE:tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "lib": ["ES2022"],
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "types": [
+      "@cloudflare/workers-types"
+    ]
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}
+
+FILE:wrangler.toml
+name = "{{name}}"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[durable_objects.bindings]]
+name = "{{name|upper}}_DURABLE_OBJECT"
+class_name = "{{name|title}}DurableObject"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["{{name|title}}DurableObject"]
+
+FILE:src/index.ts
+/**
+ * {{name}} - Cloudflare Durable Object
+ */
+
+export interface Env {
+  {{name|upper}}_DURABLE_OBJECT: DurableObjectNamespace<{{name|title}}DurableObject>;
+}
+
+export class {{name|title}}DurableObject implements DurableObject {
+  constructor(private ctx: DurableObjectState, private env: Env) {}
+
+  async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    
+    switch (url.pathname) {
+      case "/":
+        return new Response("Hello from {{name}} Durable Object!");
+      
+      case "/increment":
+        const count = await this.increment();
+        return new Response(`Count: ${count}`);
+      
+      default:
+        return new Response("Not Found", { status: 404 });
+    }
+  }
+
+  async increment(): Promise<number> {
+    const current = await this.ctx.storage.get<number>("count") ?? 0;
+    const next = current + 1;
+    await this.ctx.storage.put("count", next);
+    return next;
+  }
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    
+    // Create or get Durable Object instance
+    const id = env.{{name|upper}}_DURABLE_OBJECT.idFromName("default");
+    const durableObject = env.{{name|upper}}_DURABLE_OBJECT.get(id);
+    
+    // Forward request to Durable Object
+    return durableObject.fetch(request);
+  },
+} satisfies ExportedHandler<Env>;

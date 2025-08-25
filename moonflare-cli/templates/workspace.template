@@ -1,0 +1,193 @@
+FILE:.moon/workspace.yml
+$schema: "https://moonrepo.dev/schemas/workspace.json"
+
+projects:
+  globs:
+    - "apps/*"
+    - "sites/*"
+    - "workers/*"
+    - "crates/*"
+  sources:
+    shared-wasm: "shared-wasm"
+
+FILE:.moon/toolchain.yml
+$schema: "https://moonrepo.dev/schemas/toolchain.json"
+
+proto:
+  version: "0.52.1"
+
+node:
+  version: "latest"
+  packageManager: "pnpm"
+
+rust:
+  version: "latest"
+
+typescript:
+  includeProjectReferenceSources: true
+  includeSharedTypes: true
+
+FILE:shared-wasm/moon.yml
+$schema: 'https://moonrepo.dev/schemas/project.json'
+language: 'bash'
+layer: 'tool'
+
+tasks:
+  gather:
+    description: 'Copy built .wasm from crates/* into shared-wasm/'
+    script: |
+      set -euo pipefail
+      # Remove old WASM files (ignore if none)
+      rm -f ./*.wasm || true
+      # Copy any found WASM files from crates (ignore if none)
+      find "$workspaceRoot/crates" -path "*/target/wasm32-unknown-unknown/release/*.wasm" -exec cp {} . \; || true
+    outputs:
+      - '*.wasm'
+    options:
+      shell: true
+
+FILE:shared-wasm/.keep
+
+
+FILE:package.json
+{
+  "name": "{{name}}",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "sites/*",
+    "workers/*"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "moon run :build",
+    "dev": "moon run :dev", 
+    "test": "moon run :test",
+    "lint": "moon run :lint",
+    "format": "moon run :format",
+    "check": "moon run :check"
+  },
+  "devDependencies": {
+    "@moonrepo/cli": "latest"
+  }
+}
+
+FILE:justfile
+default:
+    @brew install git unzip gzip xz yq
+    @proto pin node stable --to local
+    @proto pin rust stable --to local
+    @mkdir -p apps crates sites workers shared-wasm
+    @touch apps/.keep
+    @touch sites/.keep
+    @touch workers/.keep
+    @touch shared-wasm/.keep
+    @moon setup
+
+create-project dest tmpl example_dir:
+    @curl -L -o repo.zip https://github.com/cloudflare/templates/archive/refs/heads/main.zip && unzip repo.zip "templates-main/{{ example_dir }}/*" && mv templates-main/{{ example_dir }} {{ dest }} && rm -r templates-main repo.zip
+    @moon generate {{ tmpl }} {{ dest }}
+
+astro dest:
+    @mkdir -p sites
+    @moonflare add astro {{ dest }}
+
+react dest:
+    @mkdir -p apps
+    @moonflare add react {{ dest }}
+
+durable-object dest:
+    @mkdir -p workers
+    @moonflare add durable-object {{ dest }}
+
+crate dest:
+    @mkdir -p crates
+    @moonflare add crate {{ dest }}
+
+check:
+    @moon :check
+
+lint:
+    @moon :lint
+
+format:
+    @moon :format
+
+fix:
+    @moon :fix
+
+test:
+    @moon :test
+
+build:
+    @moon :build
+
+FILE:.gitignore
+# Dependencies
+node_modules/
+target/
+dist/
+
+# Build outputs
+*.wasm
+
+# Environment
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Moon
+.moon/cache/
+
+FILE:README.md
+# {{name}}
+
+A Cloudflare-focused monorepo managed with [Moonflare](https://github.com/moonflare-dev/moonflare).
+
+## Getting Started
+
+```bash
+# Install dependencies
+npm install
+
+# Build all projects
+npm run build
+
+# Start development
+npm run dev
+```
+
+## Structure
+
+- `apps/` - React applications
+- `sites/` - Astro static sites  
+- `workers/` - Cloudflare Workers and Durable Objects
+- `crates/` - Rust libraries compiled to WebAssembly
+- `shared-wasm/` - Compiled WASM artifacts
+
+## Commands
+
+- `moonflare add <type> <name>` - Add new project
+- `moonflare build [project]` - Build projects
+- `moonflare deploy [project]` - Deploy to Cloudflare
+- `moonflare dev [project]` - Start development server
+
+## Learn More
+
+- [Moonflare Documentation](https://moonflare.dev)
+- [Moon Documentation](https://moonrepo.dev)
+- [Cloudflare Developers](https://developers.cloudflare.com)

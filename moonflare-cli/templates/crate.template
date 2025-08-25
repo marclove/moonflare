@@ -1,0 +1,94 @@
+FILE:Cargo.toml
+[package]
+name = "{{name}}"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+
+[dependencies.web-sys]
+version = "0.3"
+features = [
+  "console",
+]
+
+FILE:moon.yml
+$schema: 'https://moonrepo.dev/schemas/project.json'
+language: 'rust'
+layer: 'library'
+
+tasks:
+  format:
+    command: 'cargo'
+    args: ['fmt']
+
+  lint:
+    command: 'cargo'
+    args: ['clippy']
+
+  fix:
+    command: 'cargo'
+    args: ['clippy', "--fix"]
+
+  test:
+    command: 'cargo'
+    args: ['test']
+
+  typecheck:
+    command: 'cargo'
+    args: ['check']
+
+  docs:
+    command: 'cargo'
+    args: ['rustdoc']
+
+  build:
+    command: 'cargo'
+    args: ['build', '--release', '--target', 'wasm32-unknown-unknown']
+    inputs:
+      - 'src/**/*'
+      - 'Cargo.toml'
+    outputs:
+      - 'target/wasm32-unknown-unknown/release/*.wasm'
+
+FILE:src/lib.rs
+use wasm_bindgen::prelude::*;
+
+// Import the `console.log` function from the browser
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
+
+// Define a macro to make console.log easier to use
+macro_rules! console_log {
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}
+
+// Export a `greet` function from Rust to JavaScript that alerts the passed name
+#[wasm_bindgen]
+pub fn greet(name: &str) {
+    console_log!("Hello, {}! From {{name}} crate", name);
+}
+
+// Export a simple math function
+#[wasm_bindgen]
+pub fn add(a: i32, b: i32) -> i32 {
+    a + b
+}
+
+// Export a function that demonstrates memory management
+#[wasm_bindgen]
+pub fn process_array(data: &[i32]) -> Vec<i32> {
+    data.iter().map(|x| x * 2).collect()
+}
+
+FILE:.gitignore
+/target
+**/*.rs.bk
+Cargo.lock
