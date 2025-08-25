@@ -1,26 +1,29 @@
-# 🚀 Moonflare CLI
+# Moonflare CLI
 
 **A CLI utility for creating and managing Cloudflare-focused monorepos with excellent developer experience.**
 
+> [!WARNING]
+> While Moonflare is mostly-baked, I'm still putting the final touches on it. When it's ready for public consumption, it will be available as downloadable binaries for all platforms. In the interim, you may download and build it yourself. It's well-tested and I'm using it safely locally, but the CLI interface might change a bit before I do a public release.
+
 Moonflare combines the power of [Moon](https://moonrepo.dev) for monorepo management with Cloudflare's edge platform, providing seamless integration between Rust WebAssembly, TypeScript applications, and Cloudflare services.
 
-## ✨ Features
+## Features
 
-- **🏗️ Instant Setup**: Create production-ready monorepos with a single command
-- **🔧 Multi-Stack Support**: Astro sites, React apps, Cloudflare Workers, Durable Objects, and Rust WASM libraries
-- **⚡ WASM-First**: Seamless Rust → WebAssembly → TypeScript workflow with automatic dependency management
-- **🎯 Cloudflare Optimized**: Built-in deployment to Workers, Pages, and Durable Objects using modern Workers Static Assets
-- **📦 Smart Dependencies**: Automatic build ordering and task orchestration via Moon's dependency graph
-- **🛠️ Integrated Tooling**: Biome formatting/linting, TypeScript, and Rust toolchains with beautiful Starbase UI
-- **🚀 Zero Config**: Everything works out of the box with sensible defaults
-- **🏷️ Intelligent Builds**: Projects build efficiently with or without WASM dependencies
-- **🧪 Environment Support**: Deploy to different environments using `WRANGLER_ENV`
+- **Instant Setup**: Create production-ready monorepos with a single command
+- **Multi-Stack Support**: Astro sites, React apps, Cloudflare Workers, Durable Objects, and Rust WASM libraries
+- **WASM Batteries Included**: Seamless Rust to WebAssembly to TypeScript integration with automatic dependency management
+- **Cloudflare Optimized**: Built-in deployment to Workers, Pages, and Durable Objects using modern Workers Static Assets
+- **Smart Dependencies**: Automatic build ordering and task orchestration via Moon's dependency graph
+- **Integrated Tooling**: Biome formatting/linting, TypeScript, and Rust toolchains with Starbase UI
+- **Zero Configuration**: Everything works out of the box with sensible defaults
+- **Intelligent Builds**: Projects build efficiently with or without WASM dependencies
+- **Environment Support**: Deploy to different environments using `WRANGLER_ENV`
 
-## 🚀 Installation
+## Installation
 
 ```bash
 # Clone and build from source
-git clone https://github.com/moonflare-dev/moonflare
+git clone https://github.com/marclove/moonflare
 cd moonflare
 cargo build --release
 
@@ -29,7 +32,7 @@ cargo build --release
 export PATH="$PWD/target/release:$PATH"
 ```
 
-## ⚡ Quick Start
+## Quick Start
 
 ### Create Your First Project
 
@@ -54,7 +57,7 @@ moonflare dev
 moonflare deploy
 ```
 
-## 📚 Commands
+## Commands
 
 Moonflare leverages [Moon's task orchestration](https://moonrepo.dev/) for intelligent dependency management and parallel execution. Each command can target all projects or specific ones.
 
@@ -75,9 +78,9 @@ Moonflare leverages [Moon's task orchestration](https://moonrepo.dev/) for intel
 | `astro` | Static site with Astro | `sites/` | Cloudflare Workers (Static Assets) |
 | `react` | React SPA with Vite + TypeScript | `apps/` | Cloudflare Workers (Static Assets) |
 | `durable-object` | Stateful edge service with TypeScript | `workers/` | Cloudflare Workers |
-| `crate` | Rust library → WASM | `crates/` | Embedded in TypeScript projects |
+| `crate` | Rust library compiled to WASM | `crates/` | Embedded in TypeScript projects |
 
-## 🏗️ Project Structure
+## Project Structure
 
 Moonflare creates a Moon-managed monorepo with this structure:
 
@@ -102,9 +105,9 @@ my-project/
 └── README.md
 ```
 
-## 🔄 WASM Integration Workflow
+## WASM Integration Workflow
 
-Moonflare's killer feature is seamless WASM integration with intelligent conditional builds:
+Moonflare's core feature is seamless WASM integration with intelligent conditional builds:
 
 1. **Write Rust**: Create high-performance libraries in `crates/`
 2. **Collect Artifacts**: `shared-wasm` project gathers all `.wasm` files (only when crates exist)
@@ -127,16 +130,16 @@ pub fn fibonacci(n: u32) -> u32 {
 import init, { fibonacci } from '/shared-wasm/math.wasm';
 
 await init();
-const result = fibonacci(40); // Blazingly fast! 🔥
+const result = fibonacci(40); // High-performance computation
 ```
 
-## 🏛️ Architecture
+## Architecture
 
-Moonflare creates a Moon-managed monorepo optimized for Cloudflare deployment with intelligent dependency management:
+Moonflare creates a Moon-managed monorepo optimized for Cloudflare deployment with intelligent dependency management.
 
 ### Core Technologies
 - **CLI Framework**: Rust with Clap for argument parsing and Miette for enhanced error reporting
-- **UI Framework**: Starbase for beautiful, consistent CLI output with rich formatting
+- **UI Framework**: Starbase for consistent CLI output with rich formatting
 - **Task Orchestration**: Moon for dependency graphs, incremental builds, and parallel execution
 - **Package Management**: pnpm workspaces for JavaScript/TypeScript dependencies
 - **Template Engine**: Handlebars with convert_case for project generation
@@ -152,10 +155,10 @@ Moonflare creates a Moon-managed monorepo optimized for Cloudflare deployment wi
 ### Template System
 Templates are embedded in the CLI binary using `include_str!` and processed with Handlebars:
 - Variable substitution: `{{name}}`, `{{upper name}}`, `{{title name}}`
-- Conditional blocks: `{{#if has_wasm}}...{{/if}}`  
+- Conditional blocks: `{{#if has_wasm}}...{{/if}}`
 - Multi-file templates: `FILE:` prefix for each file in the template
 
-## 🌐 Cloudflare Integration
+## Cloudflare Integration
 
 Moonflare is optimized for Cloudflare's modern developer platform:
 
@@ -166,7 +169,7 @@ Moonflare is optimized for Cloudflare's modern developer platform:
 - **Service Integration**: Easy integration with KV, R2, D1, and other Cloudflare services
 - **Smart Builds**: Only compiles WASM when crates are present, graceful fallbacks otherwise
 
-## 🔧 Development
+## Development
 
 ### Prerequisites
 
@@ -208,7 +211,7 @@ The repository includes comprehensive smoke tests that verify the complete deplo
 
 **Available smoke tests:**
 ```bash
-# Full workflow: create workspace, add all project types, build, deploy, verify  
+# Full workflow: create workspace, add all project types, build, deploy, verify
 cargo test --test deployment_smoke_tests test_full_deployment_workflow -- --ignored
 
 # Individual project type deployments
@@ -228,7 +231,7 @@ just smoke-test
 
 # Individual smoke tests
 just smoke-test-full        # Full workflow test
-just smoke-test-individual  # Individual project tests  
+just smoke-test-individual  # Individual project tests
 just smoke-test-deps        # Dependency resolution test
 
 # CLI development tasks
@@ -236,7 +239,7 @@ just cli-dev               # Quick development check (check + lint + test)
 just cli-release           # Full release preparation (format + lint + test + build)
 ```
 
-⚠️ **Warning**: Smoke tests deploy to real Cloudflare infrastructure and may incur usage costs. Use with caution in CI environments.
+**Warning**: Smoke tests deploy to real Cloudflare infrastructure and may incur usage costs. Use with caution in CI environments.
 
 ### Testing Generated Projects
 
@@ -245,11 +248,11 @@ just cli-release           # Full release preparation (format + lint + test + bu
 ./target/release/moonflare init test-project
 cd test-project
 ../target/release/moonflare add crate math
-../target/release/moonflare add react app  
+../target/release/moonflare add react app
 ../target/release/moonflare build
 ```
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 - **Monorepo Management**: [Moon](https://moonrepo.dev)
 - **Package Management**: pnpm with workspaces
@@ -261,24 +264,24 @@ cd test-project
 - **Task Running**: Just + Moon
 - **String Processing**: convert_case for reliable template transformations
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
-2. Create a feature branch  
+2. Create a feature branch
 3. Make your changes
 4. Run `cargo test` and `cargo clippy`
 5. Test with real projects to ensure templates work correctly
 6. Submit a pull request
 
-## 📖 Examples
+## Examples
 
 Check out the [examples](./examples) directory for complete project templates:
 
 - **E-commerce Site**: Astro + React + Durable Objects + Rust WASM
-- **SaaS Dashboard**: React + Workers + D1 Database  
+- **SaaS Dashboard**: React + Workers + D1 Database
 - **Content Site**: Astro + KV + Image Optimization
 
-## 📄 License
+## License
 
 MIT License - see [LICENSE](./LICENSE) for details.
 
@@ -286,8 +289,8 @@ MIT License - see [LICENSE](./LICENSE) for details.
 
 <div align="center">
 
-**Built with ❤️ for the Cloudflare ecosystem**
+**Built with care for the Cloudflare ecosystem**
 
-[Examples](./examples) • [Contributing](./CONTRIBUTING.md) • [Issues](https://github.com/moonflare-dev/moonflare/issues)
+[Examples](./examples) • [Contributing](./CONTRIBUTING.md) • [Issues](https://github.com/marclove/moonflare/issues)
 
 </div>

@@ -6,8 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Moonflare is a CLI utility for creating and managing Cloudflare-focused monorepos with excellent developer experience. The repository contains:
 
-- **`src/`** - The main Rust CLI binary source code
-- **`templates/`** - Template files embedded in the CLI binary at compile time
+- **`src/`** - The main Rust CLI binary source code (includes embedded template files in `src/templates/`)
 - **Generated monorepos** have this structure:
   - **`crates/`** - Rust libraries that compile to WebAssembly (WASM32 target)
   - **`apps/`** - React frontend applications with Vite
@@ -22,7 +21,7 @@ The Moonflare CLI is built in Rust with modern error handling and beautiful UI:
 - **Miette** for enhanced error reporting with context and suggestions  
 - **Starbase** for beautiful CLI output with consistent formatting and colors
 - **Handlebars** for template processing with `convert_case` for string transformations
-- **Embedded templates** for all project types (Astro, React, Durable Objects, Rust crates) in `templates/`
+- **Embedded templates** for all project types (Astro, React, Durable Objects, Rust crates) in `src/templates/`
 - **Moon integration** for task orchestration and dependency management
 - **Cloudflare integration** via Wrangler CLI for deployment with environment support  
 - **Custom help system** that bypasses Clap to provide rich, formatted help output
@@ -104,7 +103,7 @@ The Moonflare CLI is built in Rust with modern error handling and beautiful UI:
 4. Test CLI functionality with `./target/release/moonflare`
 
 ### CLI Template Development
-1. Templates are in `templates/*.template`
+1. Templates are in `src/templates/*.template`
 2. Use `FILE:` prefix for each file in template
 3. Use `{{variable}}` syntax for Handlebars substitution  
 4. Templates are embedded at compile time via `include_str!`
