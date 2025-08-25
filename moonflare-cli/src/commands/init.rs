@@ -18,29 +18,55 @@ impl InitCommand {
         }
     }
 
-    pub async fn execute(&self, name: &str, path: Option<&str>) -> Result<()> {
+    pub async fn execute(&self, name: &str, path: Option<&str>, force: bool) -> Result<()> {
         println!("{}", "Initializing new Moonflare monorepo...".cyan().bold());
 
-        // Validate workspace name
-        validate_workspace_name(name).into_diagnostic()?;
-
-        // Determine target directory
-        let target_dir = match path {
-            Some(p) => Path::new(p).join(name),
-            None => Path::new(".").join(name),
+        // Determine target directory and workspace name
+        let (target_dir, workspace_name) = if name == "." {
+            // Initialize in current directory
+            let current_dir = std::env::current_dir()
+                .map_err(|e| MoonflareError::file_system_error("get current directory", std::env::current_dir().unwrap_or_default(), e))
+                .into_diagnostic()?;
+            
+            // Use the directory name as the workspace name
+            let dir_name = current_dir
+                .file_name()
+                .and_then(|n| n.to_str())
+                .ok_or_else(|| MoonflareError::invalid_workspace_name(".", vec!["my-workspace".to_string(), "my-app".to_string()]))
+                .into_diagnostic()?
+                .to_string();
+            
+            // Validate the directory name as workspace name
+            validate_workspace_name(&dir_name).into_diagnostic()?;
+            
+            (current_dir, dir_name)
+        } else {
+            // Validate provided workspace name
+            validate_workspace_name(name).into_diagnostic()?;
+            
+            // Determine target directory
+            let target_dir = match path {
+                Some(p) => Path::new(p).join(name),
+                None => Path::new(".").join(name),
+            };
+            
+            (target_dir, name.to_string())
         };
 
         // Check if directory already exists and has content
         if target_dir.exists() {
             if target_dir.is_dir() {
-                let is_empty = std::fs::read_dir(&target_dir)
+                let entries: Vec<std::fs::DirEntry> = std::fs::read_dir(&target_dir)
                     .map_err(|e| MoonflareError::permission_denied(target_dir.clone(), e))
                     .into_diagnostic()?
-                    .next()
-                    .is_none();
+                    .collect::<Result<Vec<_>, std::io::Error>>()
+                    .map_err(|e| MoonflareError::permission_denied(target_dir.clone(), e))
+                    .into_diagnostic()?;
                 
-                if !is_empty {
-                    return Err(MoonflareError::workspace_directory_exists(target_dir)).into_diagnostic();
+                if !entries.is_empty() && !force {
+                    return Err(MoonflareError::directory_not_empty(target_dir, entries)).into_diagnostic();
+                } else if !entries.is_empty() && force {
+                    println!("{}", format!("Warning: Directory '{}' contains {} files. Proceeding with --force.", target_dir.display(), entries.len()).yellow());
                 }
             } else {
                 // Path exists but is not a directory
@@ -72,7 +98,7 @@ impl InitCommand {
 
         // Prepare template context
         let mut context = HashMap::new();
-        context.insert("name".to_string(), Value::String(name.to_string()));
+        context.insert("name".to_string(), Value::String(workspace_name.clone()));
 
         // Generate workspace files
         if let Some(template) = embedded::get_template("workspace") {
@@ -136,10 +162,12 @@ impl InitCommand {
             .map_err(|e| MoonflareError::file_system_error("restore directory", current_dir.clone(), e))
             .into_diagnostic()?;
 
-        println!("{}", format!("Successfully created {} monorepo!", name).green().bold());
+        println!("{}", format!("Successfully created {} monorepo!", workspace_name).green().bold());
         println!();
         println!("{}", "Next steps:".yellow().bold());
-        println!("  cd {}", name);
+        if name != "." {
+            println!("  cd {}", workspace_name);
+        }
         println!("  moonflare add <type> <name>  # Add a new project");
         println!();
         println!("{}", "Available project types:".blue());

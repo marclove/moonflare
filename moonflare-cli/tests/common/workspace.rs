@@ -63,6 +63,56 @@ impl MoonflareTestWorkspace {
         Ok(())
     }
 
+    pub fn init_with_force(&self, name: &str) -> anyhow::Result<()> {
+        let start = Instant::now();
+        log(&format!("Initializing workspace with force: {}", name));
+
+        let mut cmd = Command::new(&self.moonflare_binary);
+        cmd.arg("init").arg(name).arg("--force").current_dir(self.temp_dir.path());
+
+        let output = run_command_with_timeout(cmd, 5)?;
+
+        if !output.status.success() {
+            anyhow::bail!(
+                "Failed to init moonflare workspace with force: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+
+        log(&format!("Workspace initialized with force in {:?}", start.elapsed()));
+        Ok(())
+    }
+
+    pub fn init_should_fail(&self, name: &str) -> anyhow::Result<String> {
+        let start = Instant::now();
+        log(&format!("Expecting init to fail for: {}", name));
+
+        let mut cmd = Command::new(&self.moonflare_binary);
+        cmd.arg("init").arg(name).current_dir(self.temp_dir.path());
+
+        let output = run_command_with_timeout(cmd, 5)?;
+
+        if output.status.success() {
+            anyhow::bail!("Expected init to fail, but it succeeded");
+        }
+
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        log(&format!("Init failed as expected in {:?}: {}", start.elapsed(), stderr.lines().next().unwrap_or("Unknown error")));
+        Ok(stderr)
+    }
+
+    pub fn create_subdirectory(&self, name: &str) -> anyhow::Result<PathBuf> {
+        let subdir_path = self.temp_dir.path().join(name);
+        std::fs::create_dir_all(&subdir_path)?;
+        Ok(subdir_path)
+    }
+
+    pub fn create_file_in_directory(&self, dir: &Path, filename: &str, content: &str) -> anyhow::Result<()> {
+        let file_path = dir.join(filename);
+        std::fs::write(file_path, content)?;
+        Ok(())
+    }
+
     pub fn add_project(
         &self,
         workspace_name: &str,

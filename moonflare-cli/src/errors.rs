@@ -28,6 +28,17 @@ pub enum MoonflareError {
         suggestion: String,
     },
 
+    #[error("Directory is not empty")]
+    #[diagnostic(
+        code(moonflare::init::directory_not_empty),
+        help("Initializing in non-empty directories may overwrite existing files. Use --force to proceed anyway, or choose an empty directory.")
+    )]
+    DirectoryNotEmpty {
+        path: String,
+        file_count: usize,
+        sample_files: Vec<String>,
+    },
+
     #[error("Permission denied")]
     #[diagnostic(
         code(moonflare::init::permission_denied),
@@ -143,6 +154,21 @@ impl MoonflareError {
         };
 
         Self::WorkspaceDirectoryExists { path: path_str, suggestion }
+    }
+
+    pub fn directory_not_empty(path: PathBuf, entries: Vec<std::fs::DirEntry>) -> Self {
+        let file_count = entries.len();
+        let sample_files = entries
+            .iter()
+            .take(5)  // Show first 5 files as samples
+            .filter_map(|entry| entry.file_name().to_str().map(|s| s.to_string()))
+            .collect();
+
+        Self::DirectoryNotEmpty {
+            path: path.display().to_string(),
+            file_count,
+            sample_files,
+        }
     }
 
     pub fn permission_denied(path: PathBuf, source: std::io::Error) -> Self {

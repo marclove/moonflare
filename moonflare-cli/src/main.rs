@@ -27,6 +27,8 @@ enum Commands {
         name: String,
         #[arg(long, help = "Directory to create the monorepo in")]
         path: Option<String>,
+        #[arg(long, help = "Force initialization in non-empty directories")]
+        force: bool,
     },
     
     #[command(about = "Add a new project to the monorepo")]
@@ -66,9 +68,9 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
     
     match cli.command {
-        Commands::Init { name, path } => {
+        Commands::Init { name, path, force } => {
             let init_cmd = InitCommand::new();
-            init_cmd.execute(&name, path.as_deref()).await?;
+            init_cmd.execute(&name, path.as_deref(), force).await?;
         },
         Commands::Add { project_type, name } => {
             let add_cmd = AddCommand::new();
