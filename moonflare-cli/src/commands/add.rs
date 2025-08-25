@@ -50,12 +50,9 @@ impl AddCommand {
         context.insert("name".to_string(), Value::String(name.to_string()));
 
         // Add additional context based on project type
-        match project_type {
-            "durable-object" => {
-                context.insert("name_upper".to_string(), Value::String(name.to_uppercase()));
-                context.insert("name_title".to_string(), Value::String(to_title_case(name)));
-            }
-            _ => {}
+        if project_type == "durable-object" {
+            context.insert("name_upper".to_string(), Value::String(name.to_uppercase()));
+            context.insert("name_title".to_string(), Value::String(to_title_case(name)));
         }
 
         // For TypeScript projects, check if we need WASM dependencies
@@ -79,7 +76,11 @@ impl AddCommand {
                 // Update shared-wasm to depend on this new crate
                 self.add_crate_dependency_to_shared_wasm(name).await?;
             }
-            "astro" | "react" | "durable-object" => {
+            "react" | "durable-object" => {
+                // Generate Wrangler types for TypeScript support
+                self.generate_wrangler_types(&target_path).await?;
+            }
+            "astro" => {
                 // WASM dependencies are handled by template context
             }
             _ => {}
@@ -124,6 +125,43 @@ impl AddCommand {
 
     async fn add_crate_dependency_to_shared_wasm(&self, crate_name: &str) -> Result<()> {
         add_crate_build_dependency_to_shared_wasm(crate_name)?;
+        Ok(())
+    }
+
+    async fn generate_wrangler_types(&self, project_path: &Path) -> Result<()> {
+        use std::process::Command;
+        use which::which;
+
+        // Check if wrangler is available
+        if which("wrangler").is_err() {
+            // Don't fail if wrangler isn't installed, just warn
+            println!("Warning: Wrangler CLI not found. Install with: npm install -g wrangler");
+            println!("TypeScript definitions will be generated when building the project.");
+            return Ok(());
+        }
+
+        // Run wrangler types in the project directory
+        let output = Command::new("wrangler")
+            .args(&["types"])
+            .current_dir(project_path)
+            .output();
+
+        match output {
+            Ok(result) => {
+                if result.status.success() {
+                    println!("Generated TypeScript definitions for Cloudflare Workers");
+                } else {
+                    let stderr = String::from_utf8_lossy(&result.stderr);
+                    println!("Warning: Failed to generate Wrangler types: {}", stderr);
+                    println!("TypeScript definitions will be generated when building the project.");
+                }
+            }
+            Err(_) => {
+                println!("Warning: Could not run wrangler types command");
+                println!("TypeScript definitions will be generated when building the project.");
+            }
+        }
+
         Ok(())
     }
 }

@@ -11,7 +11,8 @@ FILE:package.json
     "astro": "astro",
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "check": "biome check ."
+    "check": "biome check .",
+    "deploy": "wrangler deploy ${WRANGLER_ENV:+--env $WRANGLER_ENV}"
   },
   "dependencies": {
     "astro": "^4.0.0"
@@ -19,7 +20,8 @@ FILE:package.json
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@astrojs/check": "^0.9.4",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "wrangler": "^4.32.0"
   }
 }
 
@@ -44,21 +46,17 @@ tasks:
       - "astro.config.*"
       - "package.json"
       - "tsconfig.*"
-      - "worker-configuration.d.ts"
       - "wrangler.*"{{#if has_wasm}}
       - "/shared-wasm/*.wasm"{{/if}}
     outputs:
       - 'dist'
     deps:{{#if has_wasm}}
       - 'shared-wasm:gather'{{/if}}
-      - '~:install'
 
   dev:
     command: 'pnpm'
     args: ['dev']
     local: true
-    deps:
-      - '~:install'
 
   lint:
     command: 'pnpm'
@@ -67,11 +65,9 @@ tasks:
       - "src/**/*"
       - "*.astro"
       - "*.ts"
-      - "*.js" 
+      - "*.js"
       - "biome.json"
       - "package.json"
-    deps:
-      - '~:install'
 
   format:
     command: 'pnpm'
@@ -83,8 +79,6 @@ tasks:
       - "*.js"
       - "biome.json"
       - "package.json"
-    deps:
-      - '~:install'
 
   check:
     command: 'pnpm'
@@ -96,8 +90,13 @@ tasks:
       - "*.js"
       - "biome.json"
       - "package.json"
+
+  deploy:
+    command: 'pnpm'
+    args: ['run', 'deploy']
+    local: true
     deps:
-      - '~:install'
+      - '~:build'
 
 FILE:biome.json
 {
@@ -165,3 +164,51 @@ FILE:public/favicon.svg
     }
   </style>
 </svg>
+
+FILE:wrangler.jsonc
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "{{name}}",
+	"compatibility_date": "2025-08-15",
+	"assets": {
+		// The path to the directory containing the `index.html` file to be served at `/`
+		"directory": "./dist"
+	},
+	"observability": {
+		"enabled": true
+	}
+	/**
+	 * Smart Placement
+	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+	 */
+	// "placement": { "mode": "smart" }
+	/**
+	 * Bindings
+	 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
+	 * databases, object storage, AI inference, real-time communication and more.
+	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
+	 */
+	/**
+	 * Environment Variables
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+	 */
+	// "vars": { "MY_VARIABLE": "production_value" }
+	/**
+	 * Note: Use secrets to store sensitive data.
+	 * https://developers.cloudflare.com/workers/configuration/secrets/
+	 */
+	/**
+	 * Static Assets
+	 * https://developers.cloudflare.com/workers/static-assets/binding/
+	 */
+	// "assets": { "directory": "./public/", "binding": "ASSETS" }
+	/**
+	 * Service Bindings (communicate between multiple Workers)
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
+	 */
+	// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
+}

@@ -17,7 +17,7 @@ pub fn check_moon_installation() -> Result<()> {
             
             // Try to install via proto
             let output = Command::new("proto")
-                .args(&["install", "moon"])
+                .args(["install", "moon"])
                 .output();
                 
             match output {

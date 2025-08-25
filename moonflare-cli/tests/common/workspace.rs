@@ -180,4 +180,34 @@ impl MoonflareTestWorkspace {
         log(&format!("Build completed in {:?}", start.elapsed()));
         Ok(())
     }
+
+    pub fn deploy(&self, workspace_name: &str) -> anyhow::Result<()> {
+        let start = Instant::now();
+        log(&format!("Deploying workspace '{}'", workspace_name));
+
+        let mut cmd = Command::new(&self.moonflare_binary);
+        cmd.arg("deploy")
+            .current_dir(self.temp_dir.path().join(workspace_name));
+
+        let output = run_command_with_timeout(cmd, 300)?; // 5 minutes timeout
+
+        if !output.status.success() {
+            log(&format!("Deploy failed after {:?}", start.elapsed()));
+            log(&format!(
+                "STDOUT: {}",
+                String::from_utf8_lossy(&output.stdout)
+            ));
+            log(&format!(
+                "STDERR: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ));
+            anyhow::bail!(
+                "Failed to deploy workspace: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+
+        log(&format!("Deploy completed in {:?}", start.elapsed()));
+        Ok(())
+    }
 }

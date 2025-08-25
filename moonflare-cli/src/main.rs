@@ -74,12 +74,11 @@ async fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     
     // Handle main help
-    if args.len() == 1 || args.contains(&"--help".to_string()) || args.contains(&"-h".to_string()) {
-        if args.len() == 2 && (args[1] == "--help" || args[1] == "-h") {
+    if (args.len() == 1 || args.contains(&"--help".to_string()) || args.contains(&"-h".to_string()))
+        && args.len() == 2 && (args[1] == "--help" || args[1] == "-h") {
             ui.render_main_help().map_err(|e| miette::miette!("Failed to render help: {}", e))?;
             return Ok(());
         }
-    }
     
     // Handle subcommand help
     if args.len() >= 3 && (args[2] == "--help" || args[2] == "-h") {

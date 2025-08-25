@@ -10,7 +10,8 @@ FILE:package.json
     "preview": "vite preview",
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "check": "biome check ."
+    "check": "biome check .",
+    "deploy": "wrangler deploy ${WRANGLER_ENV:+--env $WRANGLER_ENV}"
   },
   "dependencies": {
     "hono": "^4.8.2",
@@ -26,7 +27,7 @@ FILE:package.json
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "^5.8.0",
     "vite": "^6.0.0",
-    "wrangler": "^4.21.0"
+    "wrangler": "^4.32.0"
   }
 }
 
@@ -39,12 +40,14 @@ stack: 'frontend'
 tasks:
   build:{{#if has_wasm}}
     script: |
+      pnpm wrangler types || echo "Warning: Could not generate types"
       pnpm build
       # Copy WASM files to dist for Cloudflare deployment
       mkdir -p dist
       cp -f ../../shared-wasm/*.wasm dist/ 2>/dev/null || true{{else}}
-    command: 'pnpm'
-    args: ['build']{{/if}}
+    script: |
+      pnpm wrangler types || echo "Warning: Could not generate types"
+      pnpm build{{/if}}
     inputs:
       - "public/**/*"
       - "src/**/*"
@@ -60,14 +63,11 @@ tasks:
       - 'dist'
     deps:{{#if has_wasm}}
       - 'shared-wasm:gather'{{/if}}
-      - '~:install'
 
   dev:
     command: 'pnpm'
     args: ['dev']
     local: true
-    deps:
-      - '~:install'
 
   lint:
     command: 'pnpm'
@@ -80,8 +80,6 @@ tasks:
       - "*.js"
       - "biome.json"
       - "package.json"
-    deps:
-      - '~:install'
 
   format:
     command: 'pnpm'
@@ -94,8 +92,6 @@ tasks:
       - "*.js"
       - "biome.json"
       - "package.json"
-    deps:
-      - '~:install'
 
   check:
     command: 'pnpm'
@@ -108,8 +104,13 @@ tasks:
       - "*.js"
       - "biome.json"
       - "package.json"
+
+  deploy:
+    command: 'pnpm'
+    args: ['run', 'deploy']
+    local: true
     deps:
-      - '~:install'
+      - '~:build'
 
 FILE:biome.json
 {
@@ -160,6 +161,51 @@ FILE:tsconfig.app.json
     "noUncheckedSideEffectImports": true
   },
   "include": ["src"]
+}
+
+FILE:wrangler.jsonc
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "{{name}}",
+	"compatibility_date": "2025-08-23",
+	"assets": {
+		"directory": "./dist",
+		"not_found_handling": "single-page-application"
+	}
+	/**
+	 * Smart Placement
+	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+	 */
+	// "placement": { "mode": "smart" }
+	/**
+	 * Bindings
+	 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
+	 * databases, object storage, AI inference, real-time communication and more.
+	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
+	 */
+	/**
+	 * Environment Variables
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+	 */
+	// "vars": { "MY_VARIABLE": "production_value" }
+	/**
+	 * Note: Use secrets to store sensitive data.
+	 * https://developers.cloudflare.com/workers/configuration/secrets/
+	 */
+	/**
+	 * Static Assets
+	 * https://developers.cloudflare.com/workers/static-assets/binding/
+	 */
+	// "assets": { "directory": "./public/", "binding": "ASSETS" }
+	/**
+	 * Service Bindings (communicate between multiple Workers)
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
+	 */
+	// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
 }
 
 FILE:vite.config.ts

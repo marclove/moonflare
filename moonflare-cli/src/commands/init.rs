@@ -24,7 +24,7 @@ impl InitCommand {
         self.ui.render_header(
             "Moonflare: Supersonic Cloudflare monorepo", 
             Some("Initializing new workspace with Moon build system")
-        ).map_err(|e| MoonflareError::file_system_error("UI render", std::env::current_dir().unwrap_or_default(), std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))).into_diagnostic()?;
+        ).map_err(|e| MoonflareError::file_system_error("UI render", std::env::current_dir().unwrap_or_default(), std::io::Error::other(e.to_string()))).into_diagnostic()?;
 
         // Determine target directory and workspace name
         let (target_dir, workspace_name) = if name == "." {
@@ -104,14 +104,14 @@ impl InitCommand {
                         "Directory is not empty",
                         &message,
                         suggestions
-                    ).map_err(|e| MoonflareError::file_system_error("UI render", target_dir.clone(), std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))).into_diagnostic()?;
+                    ).map_err(|e| MoonflareError::file_system_error("UI render", target_dir.clone(), std::io::Error::other(e.to_string()))).into_diagnostic()?;
                     
                     // Return early with exit code 1 - the UI has already shown the nice error
                     // Use a minimal error since our UI already displayed the helpful message
                     std::process::exit(1);
                 } else if !entries.is_empty() && force {
                     self.ui.render_section_start(&format!("Warning: Directory '{}' contains {} files. Proceeding with --force.", target_dir.display(), entries.len()))
-                        .map_err(|e| MoonflareError::file_system_error("UI render", target_dir.clone(), std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))).into_diagnostic()?;
+                        .map_err(|e| MoonflareError::file_system_error("UI render", target_dir.clone(), std::io::Error::other(e.to_string()))).into_diagnostic()?;
                 }
             } else {
                 // Path exists but is not a directory
@@ -131,7 +131,7 @@ impl InitCommand {
                     }
                 } else {
                     MoonflareError::file_system_error("create directory", target_dir.clone(), 
-                        std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+                        std::io::Error::other(e.to_string()))
                 }
             })
             .into_diagnostic()?;
@@ -151,7 +151,7 @@ impl InitCommand {
                 template,
                 &target_dir,
                 &context
-            ).map_err(|e| MoonflareError::template_error("workspace", Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))))
+            ).map_err(|e| MoonflareError::template_error("workspace", Box::new(std::io::Error::other(e.to_string()))))
             .into_diagnostic()?;
         }
 
@@ -170,7 +170,7 @@ impl InitCommand {
                         MoonflareError::file_system_error(
                             &format!("create {} directory", dir), 
                             target_dir.join(dir), 
-                            std::io::Error::new(std::io::ErrorKind::Other, e.to_string())
+                            std::io::Error::other(e.to_string())
                         )
                     }
                 })
@@ -179,7 +179,7 @@ impl InitCommand {
 
         // Run moon setup in the new workspace
         self.ui.render_section_start("Initializing Moon workspace")
-            .map_err(|e| MoonflareError::file_system_error("UI render", std::env::current_dir().unwrap_or_default(), std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))).into_diagnostic()?;
+            .map_err(|e| MoonflareError::file_system_error("UI render", std::env::current_dir().unwrap_or_default(), std::io::Error::other(e.to_string()))).into_diagnostic()?;
         let current_dir = std::env::current_dir()
             .map_err(|e| MoonflareError::file_system_error("get current directory", std::env::current_dir().unwrap_or_default(), e))
             .into_diagnostic()?;
@@ -191,7 +191,7 @@ impl InitCommand {
         match moon_setup().await {
             Ok(_) => {
                 self.ui.render_success("Moon workspace initialized")
-                    .map_err(|e| MoonflareError::file_system_error("UI render", target_dir.clone(), std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))).into_diagnostic()?;
+                    .map_err(|e| MoonflareError::file_system_error("UI render", target_dir.clone(), std::io::Error::other(e.to_string()))).into_diagnostic()?;
             }
             Err(e) => {
                 // Restore directory before potentially returning error
@@ -200,7 +200,7 @@ impl InitCommand {
                 // Use proper Moon setup error for better diagnostics
                 return Err(MoonflareError::moon_setup_failed(
                     target_dir.clone(), 
-                    Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())), 
+                    Box::new(std::io::Error::other(e.to_string())), 
                     None
                 )).into_diagnostic();
             }
@@ -212,10 +212,10 @@ impl InitCommand {
             .into_diagnostic()?;
 
         self.ui.render_success(&format!("Successfully created {} monorepo!", workspace_name))
-            .map_err(|e| MoonflareError::file_system_error("UI render", std::env::current_dir().unwrap_or_default(), std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))).into_diagnostic()?;
+            .map_err(|e| MoonflareError::file_system_error("UI render", std::env::current_dir().unwrap_or_default(), std::io::Error::other(e.to_string()))).into_diagnostic()?;
 
         self.ui.render_workspace_structure()
-            .map_err(|e| MoonflareError::file_system_error("UI render", std::env::current_dir().unwrap_or_default(), std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))).into_diagnostic()?;
+            .map_err(|e| MoonflareError::file_system_error("UI render", std::env::current_dir().unwrap_or_default(), std::io::Error::other(e.to_string()))).into_diagnostic()?;
 
         let mut steps = vec![];
         if name != "." {
@@ -225,10 +225,10 @@ impl InitCommand {
         
         let step_refs: Vec<&str> = steps.iter().map(|s| s.as_str()).collect();
         self.ui.render_next_steps(step_refs)
-            .map_err(|e| MoonflareError::file_system_error("UI render", std::env::current_dir().unwrap_or_default(), std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))).into_diagnostic()?;
+            .map_err(|e| MoonflareError::file_system_error("UI render", std::env::current_dir().unwrap_or_default(), std::io::Error::other(e.to_string()))).into_diagnostic()?;
 
         self.ui.render_project_types()
-            .map_err(|e| MoonflareError::file_system_error("UI render", std::env::current_dir().unwrap_or_default(), std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))).into_diagnostic()?;
+            .map_err(|e| MoonflareError::file_system_error("UI render", std::env::current_dir().unwrap_or_default(), std::io::Error::other(e.to_string()))).into_diagnostic()?;
 
         Ok(())
     }

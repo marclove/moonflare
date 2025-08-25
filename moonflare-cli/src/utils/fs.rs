@@ -81,9 +81,9 @@ pub fn add_wasm_dependency_to_project(project_path: &Path) -> Result<()> {
     let mut config: Value = serde_yaml::from_str(&content)?;
     
     // Navigate to tasks.build.deps
-    if let Some(tasks) = config.get_mut("tasks") {
-        if let Some(build_task) = tasks.get_mut("build") {
-            if let Some(build_mapping) = build_task.as_mapping_mut() {
+    if let Some(tasks) = config.get_mut("tasks")
+        && let Some(build_task) = tasks.get_mut("build")
+            && let Some(build_mapping) = build_task.as_mapping_mut() {
                 // Get existing deps or create empty array
                 let mut deps = build_mapping
                     .get("deps")
@@ -126,8 +126,8 @@ pub fn add_wasm_dependency_to_project(project_path: &Path) -> Result<()> {
                 }
                 
                 // Replace command/args with script that copies WASM files
-                build_mapping.remove(&Value::String("command".to_string()));
-                build_mapping.remove(&Value::String("args".to_string()));
+                build_mapping.remove(Value::String("command".to_string()));
+                build_mapping.remove(Value::String("args".to_string()));
                 
                 let script = "pnpm build\n# Copy WASM files to dist for Cloudflare deployment\nmkdir -p dist\ncp -f ../../shared-wasm/*.wasm dist/ 2>/dev/null || true";
                 build_mapping.insert(
@@ -135,8 +135,6 @@ pub fn add_wasm_dependency_to_project(project_path: &Path) -> Result<()> {
                     Value::String(script.to_string())
                 );
             }
-        }
-    }
     
     // Write back to file
     let updated_content = serde_yaml::to_string(&config)?;
@@ -152,21 +150,16 @@ pub fn has_wasm_dependency(project_path: &Path) -> bool {
         return false;
     }
     
-    if let Ok(content) = fs::read_to_string(&moon_yml_path) {
-        if let Ok(config) = serde_yaml::from_str::<Value>(&content) {
-            if let Some(tasks) = config.get("tasks") {
-                if let Some(build_task) = tasks.get("build") {
-                    if let Some(deps) = build_task.get("deps") {
-                        if let Some(deps_array) = deps.as_sequence() {
+    if let Ok(content) = fs::read_to_string(&moon_yml_path)
+        && let Ok(config) = serde_yaml::from_str::<Value>(&content)
+            && let Some(tasks) = config.get("tasks")
+                && let Some(build_task) = tasks.get("build")
+                    && let Some(deps) = build_task.get("deps")
+                        && let Some(deps_array) = deps.as_sequence() {
                             return deps_array.iter().any(|dep| {
                                 dep.as_str() == Some("shared-wasm:gather")
                             });
                         }
-                    }
-                }
-            }
-        }
-    }
     
     false
 }
@@ -182,9 +175,9 @@ pub fn add_crate_build_dependency_to_shared_wasm(crate_name: &str) -> Result<()>
     let mut config: Value = serde_yaml::from_str(&content)?;
     
     // Navigate to tasks.gather.deps
-    if let Some(tasks) = config.get_mut("tasks") {
-        if let Some(gather_task) = tasks.get_mut("gather") {
-            if let Some(gather_mapping) = gather_task.as_mapping_mut() {
+    if let Some(tasks) = config.get_mut("tasks")
+        && let Some(gather_task) = tasks.get_mut("gather")
+            && let Some(gather_mapping) = gather_task.as_mapping_mut() {
                 // Get existing deps or create empty array
                 let mut deps = gather_mapping
                     .get("deps")
@@ -209,8 +202,6 @@ pub fn add_crate_build_dependency_to_shared_wasm(crate_name: &str) -> Result<()>
                     );
                 }
             }
-        }
-    }
     
     // Write back to file
     let updated_content = serde_yaml::to_string(&config)?;

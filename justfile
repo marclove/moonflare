@@ -49,3 +49,45 @@ test:
 
 build:
     @moon :build
+
+# CLI Development Tasks
+cli-build:
+    @cd moonflare-cli && cargo build --release
+
+cli-test:
+    @cd moonflare-cli && cargo test
+
+cli-lint:
+    @cd moonflare-cli && cargo clippy
+
+cli-fmt:
+    @cd moonflare-cli && cargo fmt
+
+cli-check:
+    @cd moonflare-cli && cargo check
+
+cli-dev: cli-check cli-lint cli-test
+    @echo "✅ CLI development checks complete"
+
+cli-release: cli-fmt cli-lint cli-test cli-build
+    @echo "✅ CLI ready for release"
+
+# Smoke Tests (deploy to real Cloudflare infrastructure)
+smoke-test:
+    @echo "⚠️  WARNING: This will deploy to real Cloudflare infrastructure and may incur costs!"
+    @echo "Prerequisites: Wrangler CLI installed and authenticated (wrangler login)"
+    @echo "Continuing in 3 seconds..."
+    @sleep 3
+    @cd moonflare-cli && cargo test --test deployment_smoke_tests -- --ignored
+
+smoke-test-full:
+    @echo "🚀 Running full deployment workflow smoke test..."
+    @cd moonflare-cli && cargo test --test deployment_smoke_tests test_full_deployment_workflow -- --ignored
+
+smoke-test-individual:
+    @echo "🧪 Testing individual project deployments..."
+    @cd moonflare-cli && cargo test --test deployment_smoke_tests test_individual_project_deployments -- --ignored
+
+smoke-test-deps:
+    @echo "🔧 Testing dependency resolution..."
+    @cd moonflare-cli && cargo test --test deployment_smoke_tests test_dependency_resolution -- --ignored

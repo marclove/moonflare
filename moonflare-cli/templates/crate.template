@@ -91,4 +91,3 @@ pub fn process_array(data: &[i32]) -> Vec<i32> {
 FILE:.gitignore
 /target
 **/*.rs.bk
-Cargo.lock
