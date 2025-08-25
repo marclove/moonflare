@@ -2,63 +2,95 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## Architecture Overview
 
-Moonflare is a project template repository that provides Moon build system configurations for various technology stacks including Astro, React, Rust crates, and Cloudflare Durable Objects. The repository uses the Moon build system for task orchestration and Just for project setup automation.
+Moonflare is a Moon-managed monorepo for Cloudflare-focused web development with WASM integration. The repository is structured as:
 
-## Key Commands
+- **`crates/`** - Rust libraries that compile to WebAssembly (WASM32 target)
+- **`apps/`** - React frontend applications with Vite
+- **`sites/`** - Astro static sites
+- **`workers/`** - Cloudflare Workers with Durable Objects
+- **`shared-wasm/`** - Compiled WASM artifacts collected from crates
+- **`templates/`** - Moon project templates for scaffolding new projects
 
-### Setup Commands
-- `just` - Install dependencies (brew, proto, moon setup) and create project directories
-- `moon setup` - Initialize the Moon build system
+### WASM Build Pipeline
 
-### Project Creation Commands
-- `just create-astro-app <dest>` - Create a new Astro app in `sites/<dest>`
-- `just create-react-app <dest>` - Create a new React app in `apps/<dest>`
-- `just create-durable-object <dest>` - Create a new Durable Object worker in `workers/<dest>`
-- `just create-crate <dest>` - Create a new Rust crate in `crates/<dest>`
+Rust crates build to `wasm32-unknown-unknown` target. The `shared-wasm` project gathers all `.wasm` files from `crates/*/target/wasm32-unknown-unknown/release/*.wasm` and makes them available to TypeScript projects as dependencies.
 
-### Common Moon Tasks
-For TypeScript projects (Astro/React/Durable Objects):
-- `moon run <project>:build` - Build the project using pnpm
+## Common Commands
 
-For Rust projects:
-- `moon run <project>:build` - Build WASM target with `cargo build --release --target wasm32-unknown-unknown`
-- `moon run <project>:test` - Run tests with `cargo test`
-- `moon run <project>:lint` - Run clippy linter
-- `moon run <project>:format` - Format code with cargo fmt
-- `moon run <project>:typecheck` - Type check with `cargo check`
+All commands use Just as a task runner and Moon as the monorepo tool:
 
-## Architecture
+### Development Commands
+- `just build` - Build all projects
+- `just test` - Run all tests
+- `just lint` - Lint all projects
+- `just format` - Format all code
+- `just check` - Run all checks (Biome for TS, Clippy for Rust)
+- `just fix` - Auto-fix linting issues
+
+### Project Creation
+- `just astro <name>` - Create new Astro site in `sites/<name>`
+- `just react <name>` - Create new React app in `apps/<name>`
+- `just durable-object <name>` - Create new Durable Object worker in `workers/<name>`
+- `just crate <name>` - Create new Rust crate in `crates/<name>`
+
+### Moon Commands
+Use `moon` directly for more granular control:
+- `moon run <project>:<task>` - Run specific task
+- `moon :lint` - Run lint across all projects
+- `moon <project>:build` - Build specific project
+
+## Project Types and Tooling
+
+### Rust Crates (`crates/`)
+- Language: Rust
+- Tasks: `format` (cargo fmt), `lint` (cargo clippy), `test` (cargo test), `build` (cargo build --release --target wasm32-unknown-unknown)
+- Build output: WASM files in `target/wasm32-unknown-unknown/release/`
+
+### TypeScript Projects (`apps/`, `sites/`, `workers/`)
+- Language: TypeScript
+- Package manager: pnpm
+- Linting/Formatting: Biome
+- Tasks: `build` (pnpm build), `lint` (pnpm biome lint), `format` (pnpm biome format), `check` (pnpm biome check)
+- All depend on `shared-wasm:gather` to access compiled WASM
+
+### Frontend Stack Differences
+- **Astro sites**: Static site generation, layer: application, stack: frontend
+- **React apps**: Vite + React, layer: application, stack: frontend  
+- **Durable Object workers**: Cloudflare Workers, layer: application, stack: backend
+
+## Advanced Moon Features
+
+### Task Types and Modes
+- **Build tasks**: Compile/build operations with outputs and caching
+- **Run tasks**: Execute applications or scripts
+- **Test tasks**: Run test suites
+- **Local tasks**: Only run locally (not in CI), caching disabled
+- **Internal tasks**: Used as dependencies, hidden from user
+- **Persistent tasks**: Long-running processes (servers/watchers), run last in dependency graph
 
 ### Project Structure
-```
-templates/
-├── astro-moon/          # Template for Astro applications
-├── react-moon/          # Template for React applications
-├── durable-object-moon/ # Template for Cloudflare Durable Objects
-└── crate-moon/          # Template for Rust crates
-```
+- **Project layers**: library, application, tool (affects task inheritance)
+- **Project stacks**: frontend, backend (provides context for tooling)
+- **Project aliases**: Language-inferred secondary names (e.g., package.json name)
 
-### Template System
-Each template contains:
-- `moon.yml` - Moon project configuration defining tasks, inputs, outputs, and dependencies
-- `template.yml` - Moon template metadata
+### Configuration Inheritance
+- Tasks can be defined at workspace level (`.moon/tasks.yml`) and inherited by projects
+- Project-level `moon.yml` can override or extend workspace tasks
+- Supports command vs script distinction (commands are single binaries, scripts support pipes/shells)
 
-### Technology Stack Layers
-- **Frontend Applications**: Astro and React projects in the `application` layer with `frontend` stack
-- **Backend Applications**: Durable Objects in the `application` layer with `backend` stack
-- **Libraries**: Rust crates in the `library` layer
+### Performance Features
+- **Smart hashing**: Deterministic builds based on inputs
+- **Incremental builds**: Only rebuild changed projects
+- **Remote caching**: Share build artifacts across environments
+- **Parallel execution**: Tasks run concurrently based on dependency graph
 
-### Build Dependencies
-- TypeScript projects depend on `shared-wasm:gather` task
-- WASM files are expected in `/shared-wasm/*.wasm`
-- All TypeScript projects use pnpm as the package manager
+## Development Workflow
 
-### Prerequisites
-The setup requires:
-- proto (for Node.js and Rust version management)
-- Moon build system
-- brew (for dependency installation)
-- cargo (for Rust projects)
-- pnpm (for TypeScript projects)
+1. When creating new Rust crates, they automatically get added to the `shared-wasm/moon.yml` dependency chain
+2. WASM builds are automatically gathered into `shared-wasm/` directory
+3. TypeScript projects automatically depend on the gathered WASM files
+4. Use Moon's task dependencies to ensure proper build order
+5. Leverage `moon run` for granular task execution with dependency resolution
+6. Use project aliases interchangeably with project names in commands
