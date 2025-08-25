@@ -75,6 +75,12 @@ async fn main() -> Result<()> {
     // Check for help requests before parsing with clap
     let args: Vec<String> = env::args().collect();
 
+    // Handle version requests
+    if args.len() == 2 && (args[1] == "--version" || args[1] == "-v" || args[1] == "-V") {
+        println!("{}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
+
     // Handle main help
     if (args.len() == 1 || args.contains(&"--help".to_string()) || args.contains(&"-h".to_string()))
         && args.len() == 2
