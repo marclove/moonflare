@@ -4,42 +4,46 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-Moonflare is a Moon-managed monorepo for Cloudflare-focused web development with WASM integration. The repository is structured as:
+Moonflare is a CLI utility for creating and managing Cloudflare-focused monorepos with excellent developer experience. The repository contains:
 
-- **`crates/`** - Rust libraries that compile to WebAssembly (WASM32 target)
-- **`apps/`** - React frontend applications with Vite
-- **`sites/`** - Astro static sites
-- **`workers/`** - Cloudflare Workers with Durable Objects
-- **`shared-wasm/`** - Compiled WASM artifacts collected from crates
-- **`templates/`** - Moon project templates for scaffolding new projects
+- **`moonflare-cli/`** - The main Rust CLI binary that generates and manages monorepos
+- **`templates/`** - Legacy templates (kept for reference, now embedded in CLI)
+- **Generated monorepos** have this structure:
+  - **`crates/`** - Rust libraries that compile to WebAssembly (WASM32 target)
+  - **`apps/`** - React frontend applications with Vite
+  - **`sites/`** - Astro static sites
+  - **`workers/`** - Cloudflare Workers with Durable Objects
+  - **`shared-wasm/`** - Compiled WASM artifacts collected from crates
 
-### WASM Build Pipeline
+### CLI Architecture
 
-Rust crates build to `wasm32-unknown-unknown` target. The `shared-wasm` project gathers all `.wasm` files from `crates/*/target/wasm32-unknown-unknown/release/*.wasm` and makes them available to TypeScript projects as dependencies.
+The Moonflare CLI is built in Rust with:
+- **Clap** for command parsing and help generation
+- **Handlebars** for template processing with variable substitution
+- **Embedded templates** for all project types (Astro, React, Durable Objects, Rust crates)
+- **Moon integration** for task orchestration and dependency management
+- **Cloudflare integration** via Wrangler CLI for deployment
 
 ## Common Commands
 
-All commands use Just as a task runner and Moon as the monorepo tool:
+### CLI Development Commands
+- `cargo build --release` - Build the Moonflare CLI binary
+- `cargo test` - Run CLI tests
+- `cargo clippy` - Lint CLI code
+- `./moonflare-cli/target/release/moonflare --help` - Test CLI help
 
-### Development Commands
-- `just build` - Build all projects
-- `just test` - Run all tests
-- `just lint` - Lint all projects
-- `just format` - Format all code
-- `just check` - Run all checks (Biome for TS, Clippy for Rust)
-- `just fix` - Auto-fix linting issues
+### CLI Usage Commands
+- `moonflare init <name>` - Initialize new Cloudflare monorepo
+- `moonflare add <type> <name>` - Add project (astro, react, durable-object, crate)
+- `moonflare build [project]` - Build all projects or specific project
+- `moonflare dev [project]` - Start development server(s)
+- `moonflare deploy [project]` - Deploy to Cloudflare
 
-### Project Creation
-- `just astro <name>` - Create new Astro site in `sites/<name>`
-- `just react <name>` - Create new React app in `apps/<name>`
-- `just durable-object <name>` - Create new Durable Object worker in `workers/<name>`
-- `just crate <name>` - Create new Rust crate in `crates/<name>`
-
-### Moon Commands
-Use `moon` directly for more granular control:
-- `moon run <project>:<task>` - Run specific task
-- `moon :lint` - Run lint across all projects
-- `moon <project>:build` - Build specific project
+### Generated Monorepo Commands (within created projects)
+- `moon run :build` - Build all projects in generated monorepo
+- `moon run :test` - Run all tests in generated monorepo  
+- `moon run :lint` - Lint all projects in generated monorepo
+- `moon run <project>:<task>` - Run specific project task
 
 ## Project Types and Tooling
 
@@ -88,9 +92,26 @@ Use `moon` directly for more granular control:
 
 ## Development Workflow
 
-1. When creating new Rust crates, they automatically get added to the `shared-wasm/moon.yml` dependency chain
-2. WASM builds are automatically gathered into `shared-wasm/` directory
-3. TypeScript projects automatically depend on the gathered WASM files
-4. Use Moon's task dependencies to ensure proper build order
-5. Leverage `moon run` for granular task execution with dependency resolution
-6. Use project aliases interchangeably with project names in commands
+### Working on the CLI
+1. Make changes to Rust code in `moonflare-cli/src/`
+2. Test with `cargo check` and `cargo clippy`
+3. Build with `cargo build --release`
+4. Test CLI functionality with `./moonflare-cli/target/release/moonflare`
+
+### CLI Template Development
+1. Templates are in `moonflare-cli/templates/*.template`
+2. Use `FILE:` prefix for each file in template
+3. Use `{{variable}}` syntax for Handlebars substitution
+4. Templates are embedded at compile time via `include_str!`
+
+### Generated Monorepo Workflow (for end users)
+1. Initialize: `moonflare init my-project`
+2. Add projects: `moonflare add react my-app` 
+3. WASM crates automatically integrate with TypeScript projects
+4. Use Moon's task dependencies for proper build ordering
+5. Deploy with `moonflare deploy` using Wrangler integration
+
+### Key Integration Points
+- **Moon CLI**: Automatically installed via proto if missing
+- **Wrangler**: Required for Cloudflare deployment (manual install)
+- **WASM Pipeline**: Rust → wasm32-unknown-unknown → shared-wasm/ → TypeScript imports
