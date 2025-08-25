@@ -34,7 +34,7 @@ The Moonflare CLI is built in Rust with:
 
 ### CLI Usage Commands
 - `moonflare init <name>` - Initialize new Cloudflare monorepo
-- `moonflare add <type> <name>` - Add project (astro, react, durable-object, crate)
+- `moonflare add <type> <name>` - Add project (astro, react, worker, durable-object, crate)
 - `moonflare build [project]` - Build all projects or specific project
 - `moonflare dev [project]` - Start development server(s)
 - `moonflare deploy [project]` - Deploy to Cloudflare

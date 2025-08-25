@@ -21,7 +21,7 @@ Moonflare combines the power of [Moon](https://moonrepo.dev) for monorepo manage
 
 ```bash
 # Clone and build from source
-git clone https://github.com/moonflare-dev/moonflare.git
+git clone <repository-url>
 cd moonflare/moonflare-cli
 cargo build --release
 
@@ -70,6 +70,7 @@ moonflare deploy
 |------|-------------|------------|
 | `astro` | Static site with Astro | Cloudflare Pages |
 | `react` | React app with Vite | Cloudflare Pages |
+| `worker` | Cloudflare Worker | Cloudflare Workers |
 | `durable-object` | Stateful edge service | Cloudflare Workers |
 | `crate` | Rust library → WASM | Embedded in TypeScript projects |
 
@@ -158,7 +159,7 @@ Moonflare is optimized for Cloudflare's developer platform:
 ### Building from Source
 
 ```bash
-git clone https://github.com/moonflare-dev/moonflare.git
+git clone <repository-url>
 cd moonflare/moonflare-cli
 cargo build --release
 ./target/release/moonflare --help
@@ -182,9 +183,8 @@ Check out the [examples](./examples) directory for complete project templates:
 
 ## 🤝 Community
 
-- **Discord**: [Join our community](https://discord.gg/moonflare)
-- **GitHub Discussions**: [Ask questions](https://github.com/moonflare-dev/moonflare/discussions)
-- **Twitter**: [@MoonflareHQ](https://twitter.com/MoonflareHQ)
+- **Issues**: [Report bugs and request features](https://github.com/moonflare-dev/moonflare/issues)
+- **Discussions**: [Ask questions and share ideas](https://github.com/moonflare-dev/moonflare/discussions)
 
 ## 📄 License
 
@@ -196,6 +196,6 @@ MIT License - see [LICENSE](./LICENSE) for details.
 
 **Built with ❤️ for the Cloudflare ecosystem**
 
-[Documentation](https://moonflare.dev) • [Examples](./examples) • [Contributing](./CONTRIBUTING.md)
+[Examples](./examples) • [Contributing](./CONTRIBUTING.md)
 
 </div>
