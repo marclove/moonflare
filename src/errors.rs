@@ -335,15 +335,15 @@ fn extract_moon_main_error(output: &str) -> String {
     "Command execution failed".to_string()
 }
 
-pub fn validate_workspace_name(name: &str) -> Result<(), MoonflareError> {
+pub fn validate_workspace_name(name: &str) -> Result<(), Box<MoonflareError>> {
     let mut suggestions = Vec::new();
     let mut has_issues = false;
 
     if name.is_empty() {
-        return Err(MoonflareError::invalid_workspace_name(
+        return Err(Box::new(MoonflareError::invalid_workspace_name(
             name,
             vec!["my-app".to_string()],
-        ));
+        )));
     }
 
     // Check for invalid characters
@@ -398,7 +398,10 @@ pub fn validate_workspace_name(name: &str) -> Result<(), MoonflareError> {
             suggestions.push("my-project".to_string());
         }
 
-        return Err(MoonflareError::invalid_workspace_name(name, suggestions));
+        return Err(Box::new(MoonflareError::invalid_workspace_name(
+            name,
+            suggestions,
+        )));
     }
 
     Ok(())

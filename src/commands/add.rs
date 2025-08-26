@@ -149,7 +149,7 @@ impl AddCommand {
 
         // Run wrangler types in the project directory
         let output = Command::new("wrangler")
-            .args(&["types"])
+            .args(["types"])
             .current_dir(project_path)
             .output();
 

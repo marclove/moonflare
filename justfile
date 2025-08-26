@@ -94,3 +94,62 @@ smoke-test-deps:
 
 copy-bin:
     @sudo cp target/release/moonflare /usr/local/bin
+
+# CI/CD Tasks
+ci-check: cli-fmt cli-lint cli-check
+    @echo "✅ CI checks complete"
+
+ci-test: cli-test
+    @echo "✅ CI tests complete"  
+
+test-fast:
+    @cargo test --lib --bins
+
+# Cross-platform build tasks
+build-target target:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔄 Building for target: {{target}}"
+    if [[ "{{target}}" == "x86_64-unknown-linux-gnu" ]] || [[ "$RUNNER_OS" != "Linux" ]]; then
+        cargo build --release --target {{target}}
+    else
+        cross build --release --target {{target}}
+    fi
+    echo "✅ Build complete for {{target}}"
+
+# Package release artifacts  
+package-release target name version archive_type:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📦 Packaging {{name}} for {{version}}"
+    
+    mkdir -p release
+    cd target/{{target}}/release
+    
+    if [[ "{{target}}" == *"windows"* ]]; then
+        BINARY_NAME="moonflare.exe"
+    else
+        BINARY_NAME="moonflare"
+        strip moonflare
+    fi
+    
+    if [[ "{{archive_type}}" == "zip" ]]; then
+        7z a ../../../release/{{name}}-{{version}}.zip $BINARY_NAME
+        cd ../../../release
+        sha256sum {{name}}-{{version}}.zip > {{name}}-{{version}}.zip.sha256
+    else
+        tar -czf ../../../release/{{name}}-{{version}}.tar.gz $BINARY_NAME
+        cd ../../../release  
+        sha256sum {{name}}-{{version}}.tar.gz > {{name}}-{{version}}.tar.gz.sha256
+    fi
+    
+    echo "✅ Package created: {{name}}-{{version}}.{{archive_type}}"
+
+release-prep: cli-fmt cli-lint cli-test
+    @echo "🔍 Checking if working directory is clean..."
+    @git diff --quiet || (echo "❌ Working directory is not clean. Commit changes first." && exit 1)
+    @echo "✅ Ready for release"
+
+release version:
+    @echo "🚀 Creating release {{version}}..."
+    @./scripts/release.sh
