@@ -54,7 +54,7 @@ build:
 cli-build:
     @cargo build --release
 
-cli-test:
+cli-test: cli-build
     @cargo test
 
 cli-lint:
@@ -103,7 +103,7 @@ ci-test: cli-test
     @echo "✅ CI tests complete"  
 
 test-fast:
-    @cargo test --lib --bins
+    @cargo test --bins
 
 # Cross-platform build tasks
 build-target target:
