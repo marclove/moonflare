@@ -26,10 +26,21 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v2
 
-      - name: Install Moon CLI
+      - name: Install Proto and Moon CLI
         run: |
-          curl -fsSL https://moonrepo.dev/install/moon.sh | bash
+          # Install proto first (which Moon may try to use)
+          curl -fsSL https://moonrepo.dev/install/proto.sh | bash -s -- --yes
+          echo "$HOME/.proto/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.proto/bin:$PATH"
+          
+          # Install Moon using the official script
+          curl -fsSL https://moonrepo.dev/install/moon.sh | bash -s -- --yes
           echo "$HOME/.moon/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.moon/bin:$PATH"
+          
+          # Verify installations
+          which proto && proto --version
+          which moon && moon --version
 
       - name: Cache Cargo dependencies
         uses: actions/cache@v4
@@ -47,7 +58,13 @@ jobs:
         run: just ci-check
 
       - name: Run tests
-        run: just ci-test
+        run: |
+          # Ensure both proto and moon are in PATH
+          export PATH="$HOME/.proto/bin:$HOME/.moon/bin:$PATH"
+          echo "Proto version:" && proto --version
+          echo "Moon version:" && moon --version
+          echo "PATH: $PATH"
+          just ci-test
 
   build:
     name: Build for ${{ matrix.target }}
