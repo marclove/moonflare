@@ -24,6 +24,7 @@ jobs:
         with:
           toolchain: stable
           components: clippy, rustfmt
+          target: wasm32-unknown-unknown
 
       - name: Install just
         uses: extractions/setup-just@v2
