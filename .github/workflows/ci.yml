@@ -28,16 +28,14 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v2
 
-      - name: Setup Node.js and pnpm
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: 18
+          package-manager-cache: false
 
       - name: Install pnpm
-        run: |
-          npm install -g pnpm
-          echo "pnpm version: $(pnpm --version)"
-          echo "Node.js version: $(node --version)"
+        run: npm install -g pnpm
 
       - name: Cache Cargo dependencies
         uses: actions/cache@v4
