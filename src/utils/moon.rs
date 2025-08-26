@@ -8,13 +8,6 @@ use which::which;
 
 // Helper function to find Moon CLI in known locations
 fn find_moon_binary() -> Option<PathBuf> {
-    // First try the normal PATH lookup
-    if let Ok(path) = which("moon") {
-        return Some(path);
-    }
-
-    // In CI environments, check specific proto installation directories
-    // since PATH modifications from GitHub Actions may not be inherited
     let is_ci = std::env::var("CI").unwrap_or_default().to_lowercase() == "true"
         || std::env::var("GITHUB_ACTIONS")
             .unwrap_or_default()
@@ -22,7 +15,62 @@ fn find_moon_binary() -> Option<PathBuf> {
             == "true";
 
     if is_ci {
-        // Check common proto installation paths in CI
+        eprintln!("=== MOON BINARY SEARCH IN CI ===");
+        eprintln!("Environment: CI={}, GITHUB_ACTIONS={}", 
+            std::env::var("CI").unwrap_or_default(),
+            std::env::var("GITHUB_ACTIONS").unwrap_or_default());
+        eprintln!("Current PATH: {}", std::env::var("PATH").unwrap_or_default());
+        eprintln!("HOME directory: {}", std::env::var("HOME").unwrap_or_default());
+        eprintln!();
+    }
+
+    // First try the normal PATH lookup
+    if let Ok(path) = which("moon") {
+        if is_ci {
+            eprintln!("✓ Found Moon via PATH: {}", path.display());
+            if let Ok(metadata) = std::fs::metadata(&path) {
+                eprintln!("  File exists: {}, Size: {} bytes", metadata.is_file(), metadata.len());
+            }
+        }
+        return Some(path);
+    } else if is_ci {
+        eprintln!("✗ Moon not found in PATH via which()");
+    }
+
+    if is_ci {
+        eprintln!();
+        eprintln!("Checking expected installation locations:");
+        
+        // Check /usr/local/bin/moon (where we install it in CI)
+        let usr_local_moon = PathBuf::from("/usr/local/bin/moon");
+        eprintln!("  /usr/local/bin/moon: {}", 
+            if usr_local_moon.exists() { 
+                format!("EXISTS ({})", if usr_local_moon.is_file() { "file" } else { "not a file" })
+            } else { 
+                "NOT FOUND".to_string() 
+            });
+
+        if usr_local_moon.exists() && usr_local_moon.is_file() {
+            eprintln!("✓ Using Moon from /usr/local/bin/moon");
+            return Some(usr_local_moon);
+        }
+
+        // Check ~/.moon/bin/moon (default Moon installation location)
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/home/runner".to_string());
+        let home_moon = PathBuf::from(format!("{}/.moon/bin/moon", home));
+        eprintln!("  {}/.moon/bin/moon: {}", home,
+            if home_moon.exists() { 
+                format!("EXISTS ({})", if home_moon.is_file() { "file" } else { "not a file" })
+            } else { 
+                "NOT FOUND".to_string() 
+            });
+
+        if home_moon.exists() && home_moon.is_file() {
+            eprintln!("✓ Using Moon from {}/.moon/bin/moon", home);
+            return Some(home_moon);
+        }
+
+        // Check common proto installation paths in CI for debugging
         let home = std::env::var("HOME").unwrap_or_else(|_| "/home/runner".to_string());
         let proto_paths = [
             format!("{}/.proto/shims/moon", home),
@@ -31,12 +79,20 @@ fn find_moon_binary() -> Option<PathBuf> {
             "/home/runner/.proto/bin/moon".to_string(),
         ];
 
+        eprintln!("Legacy proto paths (for debugging):");
         for path_str in &proto_paths {
             let path = PathBuf::from(path_str);
-            if path.exists() && path.is_file() {
-                return Some(path);
-            }
+            eprintln!("  {}: {}", 
+                path_str,
+                if path.exists() { 
+                    format!("EXISTS ({})", if path.is_file() { "file" } else { "not a file" })
+                } else { 
+                    "NOT FOUND".to_string() 
+                });
         }
+
+        eprintln!();
+        eprintln!("=== MOON BINARY SEARCH FAILED ===");
     }
 
     None
