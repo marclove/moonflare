@@ -3,31 +3,149 @@ use anyhow::{Result, bail};
 use colored::*;
 use serde::{Deserialize, Serialize};
 use std::process::Command;
+use std::path::PathBuf;
 use which::which;
 
+// Helper function to find Moon CLI in known locations
+fn find_moon_binary() -> Option<PathBuf> {
+    let is_ci = std::env::var("CI").unwrap_or_default().to_lowercase() == "true"
+        || std::env::var("GITHUB_ACTIONS")
+            .unwrap_or_default()
+            .to_lowercase()
+            == "true";
+
+    if is_ci {
+        eprintln!("=== MOON BINARY SEARCH IN CI ===");
+        eprintln!("Environment: CI={}, GITHUB_ACTIONS={}", 
+            std::env::var("CI").unwrap_or_default(),
+            std::env::var("GITHUB_ACTIONS").unwrap_or_default());
+        eprintln!("Current PATH: {}", std::env::var("PATH").unwrap_or_default());
+        eprintln!("HOME directory: {}", std::env::var("HOME").unwrap_or_default());
+        eprintln!();
+    }
+
+    // First try the normal PATH lookup
+    if let Ok(path) = which("moon") {
+        if is_ci {
+            eprintln!("✓ Found Moon via PATH: {}", path.display());
+            if let Ok(metadata) = std::fs::metadata(&path) {
+                eprintln!("  File exists: {}, Size: {} bytes", metadata.is_file(), metadata.len());
+            }
+        }
+        return Some(path);
+    } else if is_ci {
+        eprintln!("✗ Moon not found in PATH via which()");
+    }
+
+    if is_ci {
+        eprintln!();
+        eprintln!("Checking expected installation locations:");
+        
+        // Check /usr/local/bin/moon (where we install it in CI)
+        let usr_local_moon = PathBuf::from("/usr/local/bin/moon");
+        eprintln!("  /usr/local/bin/moon: {}", 
+            if usr_local_moon.exists() { 
+                format!("EXISTS ({})", if usr_local_moon.is_file() { "file" } else { "not a file" })
+            } else { 
+                "NOT FOUND".to_string() 
+            });
+
+        if usr_local_moon.exists() && usr_local_moon.is_file() {
+            eprintln!("✓ Using Moon from /usr/local/bin/moon");
+            return Some(usr_local_moon);
+        }
+
+        // Check ~/.moon/bin/moon (default Moon installation location)
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/home/runner".to_string());
+        let home_moon = PathBuf::from(format!("{}/.moon/bin/moon", home));
+        eprintln!("  {}/.moon/bin/moon: {}", home,
+            if home_moon.exists() { 
+                format!("EXISTS ({})", if home_moon.is_file() { "file" } else { "not a file" })
+            } else { 
+                "NOT FOUND".to_string() 
+            });
+
+        if home_moon.exists() && home_moon.is_file() {
+            eprintln!("✓ Using Moon from {}/.moon/bin/moon", home);
+            return Some(home_moon);
+        }
+
+        // Check common proto installation paths in CI for debugging
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/home/runner".to_string());
+        let proto_paths = [
+            format!("{}/.proto/shims/moon", home),
+            format!("{}/.proto/bin/moon", home),
+            "/home/runner/.proto/shims/moon".to_string(),
+            "/home/runner/.proto/bin/moon".to_string(),
+        ];
+
+        eprintln!("Legacy proto paths (for debugging):");
+        for path_str in &proto_paths {
+            let path = PathBuf::from(path_str);
+            eprintln!("  {}: {}", 
+                path_str,
+                if path.exists() { 
+                    format!("EXISTS ({})", if path.is_file() { "file" } else { "not a file" })
+                } else { 
+                    "NOT FOUND".to_string() 
+                });
+        }
+
+        eprintln!();
+        eprintln!("=== MOON BINARY SEARCH FAILED ===");
+    }
+
+    None
+}
+
 pub fn check_moon_installation() -> Result<()> {
-    match which("moon") {
-        Ok(_) => {
+    let is_ci = std::env::var("CI").unwrap_or_default().to_lowercase() == "true"
+        || std::env::var("GITHUB_ACTIONS")
+            .unwrap_or_default()
+            .to_lowercase()
+            == "true";
+
+    match find_moon_binary() {
+        Some(_) => {
             println!("{}", "Moon CLI is installed".green());
             Ok(())
         }
-        Err(_) => {
-            println!("{}", "Moon CLI not found".yellow());
-            println!("Installing Moon via proto...");
+        None => {
+            if is_ci {
+                // In CI, provide specific guidance about setup-toolchain action
+                eprintln!("{}", "Moon CLI not found in CI environment".red());
+                eprintln!(
+                    "This usually means the moonrepo/setup-toolchain action is missing or misconfigured."
+                );
+                eprintln!();
+                eprintln!("To fix this, ensure your GitHub Actions workflow includes:");
+                eprintln!();
+                eprintln!("  - name: Setup Moon toolchain");
+                eprintln!("    uses: moonrepo/setup-toolchain@v0");
+                eprintln!("    with:");
+                eprintln!("      auto-install: true");
+                eprintln!("      cache: true");
+                eprintln!();
+                eprintln!("For more information, see: https://github.com/moonrepo/setup-toolchain");
+                bail!("Moon CLI not available in CI");
+            } else {
+                // Local development - try to install via proto
+                println!("{}", "Moon CLI not found".yellow());
+                println!("Installing Moon via proto...");
 
-            // Try to install via proto
-            let output = Command::new("proto").args(["install", "moon"]).output();
+                let output = Command::new("proto").args(["install", "moon"]).output();
 
-            match output {
-                Ok(result) if result.status.success() => {
-                    println!("{}", "Moon CLI installed successfully".green());
-                    Ok(())
-                }
-                _ => {
-                    eprintln!("{}", "Failed to install Moon CLI".red());
-                    eprintln!("Please install Moon manually:");
-                    eprintln!("  curl -fsSL https://moonrepo.dev/install/moon.sh | bash");
-                    bail!("Moon CLI installation required");
+                match output {
+                    Ok(result) if result.status.success() => {
+                        println!("{}", "Moon CLI installed successfully".green());
+                        Ok(())
+                    }
+                    _ => {
+                        eprintln!("{}", "Failed to install Moon CLI".red());
+                        eprintln!("Please install Moon manually:");
+                        eprintln!("  curl -fsSL https://moonrepo.dev/install/moon.sh | bash");
+                        bail!("Moon CLI installation required");
+                    }
                 }
             }
         }
@@ -35,7 +153,10 @@ pub fn check_moon_installation() -> Result<()> {
 }
 
 pub async fn run_moon_command(args: &[&str]) -> Result<()> {
-    let mut cmd = Command::new("moon");
+    let moon_binary = find_moon_binary()
+        .unwrap_or_else(|| PathBuf::from("moon"));
+    
+    let mut cmd = Command::new(moon_binary);
     cmd.args(args);
 
     let status = cmd.status()?;
@@ -53,7 +174,10 @@ pub async fn run_moon_command(args: &[&str]) -> Result<()> {
 
 // Run a Moon command with direct stdio passthrough for best UX
 pub async fn run_moon_command_with_error(args: &[&str]) -> std::result::Result<(), MoonflareError> {
-    let mut cmd = Command::new("moon");
+    let moon_binary = find_moon_binary()
+        .unwrap_or_else(|| PathBuf::from("moon"));
+    
+    let mut cmd = Command::new(moon_binary);
     cmd.args(args);
 
     // Let Moon's stdout and stderr pass through directly to preserve colors and formatting
@@ -79,13 +203,45 @@ pub async fn run_moon_command_with_error(args: &[&str]) -> std::result::Result<(
 }
 
 pub async fn moon_setup() -> Result<()> {
-    println!("{}", "Setting up Moon workspace...".blue());
-    run_moon_command(&["setup"]).await
+    // Check if we're in a CI environment where toolchain is already set up
+    let is_ci = std::env::var("CI").unwrap_or_default().to_lowercase() == "true"
+        || std::env::var("GITHUB_ACTIONS")
+            .unwrap_or_default()
+            .to_lowercase()
+            == "true";
+
+    if is_ci {
+        // In CI, skip moon setup since moonrepo/setup-toolchain action already handles this
+        println!("{}", "Skipping Moon setup in CI environment (toolchain already configured by setup-toolchain action)".blue());
+
+        // Verify moon is actually available in CI and provide helpful error if not
+        match find_moon_binary() {
+            Some(_) => Ok(()),
+            None => {
+                bail!(
+                    "Moon CLI not found in CI environment. This usually means the moonrepo/setup-toolchain action is missing or misconfigured.\n\n\
+                    To fix this, ensure your GitHub Actions workflow includes:\n\n\
+                    - name: Setup Moon toolchain\n      \
+                    uses: moonrepo/setup-toolchain@v0\n      \
+                    with:\n        \
+                    auto-install: true\n        \
+                    cache: true\n\n\
+                    For more information, see: https://github.com/moonrepo/setup-toolchain"
+                );
+            }
+        }
+    } else {
+        println!("{}", "Setting up Moon workspace...".blue());
+        run_moon_command(&["setup"]).await
+    }
 }
 
 // Run a Moon command and return the output without printing it
 pub async fn run_moon_command_silent(args: &[&str]) -> Result<String> {
-    let mut cmd = Command::new("moon");
+    let moon_binary = find_moon_binary()
+        .unwrap_or_else(|| PathBuf::from("moon"));
+    
+    let mut cmd = Command::new(moon_binary);
     cmd.args(args);
 
     let output = cmd.output()?;

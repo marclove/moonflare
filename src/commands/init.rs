@@ -65,12 +65,12 @@ impl InitCommand {
                 .to_string();
 
             // Validate the directory name as workspace name
-            validate_workspace_name(&dir_name).into_diagnostic()?;
+            validate_workspace_name(&dir_name).map_err(|e| miette::miette!("{}", e))?;
 
             (current_dir, dir_name)
         } else {
             // Validate provided workspace name
-            validate_workspace_name(name).into_diagnostic()?;
+            validate_workspace_name(name).map_err(|e| miette::miette!("{}", e))?;
 
             // Determine target directory
             let target_dir = match path {

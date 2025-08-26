@@ -1,0 +1,248 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release'
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Run release prep checks
+        run: just release-prep
+
+  build:
+    name: Build for ${{ matrix.target }}
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: moonflare-linux-amd64
+            archive: tar.gz
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            name: moonflare-linux-amd64-musl
+            archive: tar.gz
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: moonflare-linux-arm64
+            archive: tar.gz
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            name: moonflare-macos-amd64
+            archive: tar.gz
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            name: moonflare-macos-arm64
+            archive: tar.gz
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            name: moonflare-windows-amd64
+            archive: zip
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+            name: moonflare-windows-arm64
+            archive: zip
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: get_version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.tag }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "version_number=${VERSION#v}" >> $GITHUB_OUTPUT
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Install cross-compilation tools (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          if [[ "${{ matrix.target }}" == *"musl"* ]]; then
+            sudo apt-get install -y musl-tools
+          fi
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.target }}-cargo-
+            ${{ runner.os }}-cargo-
+
+      - name: Install cargo-cross (for cross-compilation)
+        if: matrix.os == 'ubuntu-latest' && matrix.target != 'x86_64-unknown-linux-gnu'
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Build binary
+        shell: bash
+        run: just build-target ${{ matrix.target }}
+
+      - name: Create release archive
+        shell: bash
+        run: just package-release ${{ matrix.target }} ${{ matrix.name }} ${{ steps.get_version.outputs.version }} ${{ matrix.archive }}
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.name }}
+          path: release/*
+          retention-days: 1
+
+  create-release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.tag }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Download all release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: ./release
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          cat > release_notes.md << 'EOF'
+          ## Moonflare ${{ steps.get_version.outputs.version }}
+          
+          ### Installation
+          
+          Download the appropriate binary for your platform:
+          
+          - **Linux (x86_64)**: `moonflare-linux-amd64-${{ steps.get_version.outputs.version }}.tar.gz`
+          - **Linux (x86_64, musl)**: `moonflare-linux-amd64-musl-${{ steps.get_version.outputs.version }}.tar.gz`
+          - **Linux (ARM64)**: `moonflare-linux-arm64-${{ steps.get_version.outputs.version }}.tar.gz`
+          - **macOS (Intel)**: `moonflare-macos-amd64-${{ steps.get_version.outputs.version }}.tar.gz`
+          - **macOS (Apple Silicon)**: `moonflare-macos-arm64-${{ steps.get_version.outputs.version }}.tar.gz`
+          - **Windows (x86_64)**: `moonflare-windows-amd64-${{ steps.get_version.outputs.version }}.zip`
+          - **Windows (ARM64)**: `moonflare-windows-arm64-${{ steps.get_version.outputs.version }}.zip`
+          
+          Extract and add to your PATH:
+          
+          ```bash
+          # Linux/macOS
+          tar -xzf moonflare-*.tar.gz
+          sudo mv moonflare /usr/local/bin/
+          
+          # Windows
+          # Extract zip and add to PATH
+          ```
+          
+          ### Verification
+          
+          Each binary comes with SHA256 checksums:
+          
+          ```bash
+          sha256sum -c moonflare-*-${{ steps.get_version.outputs.version }}.*.sha256
+          ```
+          
+          ### Quick Start
+          
+          ```bash
+          # Initialize new project
+          moonflare init my-project
+          cd my-project
+          
+          # Add projects
+          moonflare add react frontend
+          moonflare add astro marketing  
+          moonflare add durable-object api
+          
+          # Build and deploy
+          moonflare build
+          moonflare deploy
+          ```
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          name: Moonflare ${{ steps.get_version.outputs.version }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ contains(steps.get_version.outputs.version, '-') }}
+          files: |
+            release/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
