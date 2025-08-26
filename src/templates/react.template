@@ -61,7 +61,8 @@ tasks:
       - "/shared-wasm/*.wasm"{{/if}}
     outputs:
       - 'dist'
-    deps:{{#if has_wasm}}
+    deps:
+      - '~:install'{{#if has_wasm}}
       - 'shared-wasm:gather'{{/if}}
 
   dev:
