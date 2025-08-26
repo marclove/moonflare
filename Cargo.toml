@@ -30,12 +30,13 @@ indicatif = "0.17"
 convert_case = "0.6"
 miette = { version = "7.0", features = ["fancy"] }
 thiserror = "1.0"
-# Starbase dependencies for beautiful CLI output  
+# Starbase dependencies for beautiful CLI output
 starbase = "0.10"
 starbase_console = { version = "0.6", features = ["ui"] }
 iocraft = "0.7"
 async-trait = "0.1"
 regex = "1.10"
+openssl = { version = "0.10", features = ["vendored"] }
 
 [dev-dependencies]
 proptest = "1.4"

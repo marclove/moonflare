@@ -21,6 +21,17 @@ Moonflare combines the power of [Moon](https://moonrepo.dev) for monorepo manage
 
 ## Installation
 
+### Download Pre-built Binaries (Recommended)
+
+Download the latest release for your platform from the [Releases page](https://github.com/marclove/moonflare/releases).
+
+**Available platforms:**
+- macOS (Intel and Apple Silicon)
+- Linux (x86_64 and ARM64)
+- Windows: Build from source (see below)
+
+### Build from Source
+
 ```bash
 # Clone and build from source
 git clone https://github.com/marclove/moonflare
@@ -30,6 +41,23 @@ cargo build --release
 # The binary will be at target/release/moonflare
 # Add to PATH (optional)
 export PATH="$PWD/target/release:$PATH"
+```
+
+### Windows Users
+
+Pre-built Windows binaries use MinGW for maximum compatibility. If you prefer to build with MSVC (Visual Studio toolchain) for better integration with Windows development tools:
+
+```powershell
+# Ensure you have Rust with MSVC toolchain
+rustup toolchain install stable-msvc
+rustup default stable-msvc
+
+# Clone and build
+git clone https://github.com/marclove/moonflare
+cd moonflare
+cargo build --release
+
+# Binary will be at target\release\moonflare.exe
 ```
 
 ## Quick Start

@@ -104,7 +104,7 @@ ci-test: cli-test
 
 # Run tests sequentially in CI to avoid parallelization issues with property-based tests
 ci-test-sequential: cli-build
-    @cargo test -- --test-threads=1  
+    @cargo test -- --test-threads=1
 
 test-fast:
     @cargo test --bins
@@ -113,54 +113,54 @@ test-fast:
 build-target target:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🔄 Building for target: {{target}}"
-    
+    echo "🔄 Building for target: {{ target }}"
+
     # Handle musl targets with native cargo (avoid cross dependency)
-    if [[ "{{target}}" == *"musl"* ]]; then
-        if [[ "{{target}}" == "x86_64-unknown-linux-musl" ]]; then
-            CC_x86_64_unknown_linux_musl=musl-gcc cargo build --release --target {{target}}
-        elif [[ "{{target}}" == "aarch64-unknown-linux-musl" ]]; then
-            CC_aarch64_unknown_linux_musl=aarch64-linux-musl-gcc cargo build --release --target {{target}}
+    if [[ "{{ target }}" == *"musl"* ]]; then
+        if [[ "{{ target }}" == "x86_64-unknown-linux-musl" ]]; then
+            CC_x86_64_unknown_linux_musl=musl-gcc cargo build --release --target {{ target }}
+        elif [[ "{{ target }}" == "aarch64-unknown-linux-musl" ]]; then
+            CC_aarch64_unknown_linux_musl=aarch64-linux-musl-gcc cargo build --release --target {{ target }}
         else
             # Fallback for other musl targets
-            cargo build --release --target {{target}}
+            cargo build --release --target {{ target }}
         fi
     # Native builds (same platform or non-Linux hosts)
-    elif [[ "{{target}}" == "x86_64-unknown-linux-gnu" ]] || [[ "$RUNNER_OS" != "Linux" ]]; then
-        cargo build --release --target {{target}}
+    elif [[ "{{ target }}" == "x86_64-unknown-linux-gnu" ]] || [[ "$RUNNER_OS" != "Linux" ]]; then
+        cargo build --release --target {{ target }}
     # Use cross only for aarch64-unknown-linux-gnu (requires Docker/emulation)
     else
-        cross build --release --target {{target}}
+        cross build --release --target {{ target }}
     fi
-    echo "✅ Build complete for {{target}}"
+    echo "✅ Build complete for {{ target }}"
 
-# Package release artifacts  
+# Package release artifacts
 package-release target name version archive_type:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "📦 Packaging {{name}} for {{version}}"
-    
+    echo "📦 Packaging {{ name }} for {{ version }}"
+
     mkdir -p release
-    cd target/{{target}}/release
-    
-    if [[ "{{target}}" == *"windows"* ]]; then
+    cd target/{{ target }}/release
+
+    if [[ "{{ target }}" == *"windows"* ]]; then
         BINARY_NAME="moonflare.exe"
     else
         BINARY_NAME="moonflare"
         strip moonflare
     fi
-    
-    if [[ "{{archive_type}}" == "zip" ]]; then
-        7z a ../../../release/{{name}}-{{version}}.zip $BINARY_NAME
+
+    if [[ "{{ archive_type }}" == "zip" ]]; then
+        7z a ../../../release/{{ name }}-{{ version }}.zip $BINARY_NAME
         cd ../../../release
-        sha256sum {{name}}-{{version}}.zip > {{name}}-{{version}}.zip.sha256
+        sha256sum {{ name }}-{{ version }}.zip > {{ name }}-{{ version }}.zip.sha256
     else
-        tar -czf ../../../release/{{name}}-{{version}}.tar.gz $BINARY_NAME
-        cd ../../../release  
-        sha256sum {{name}}-{{version}}.tar.gz > {{name}}-{{version}}.tar.gz.sha256
+        tar -czf ../../../release/{{ name }}-{{ version }}.tar.gz $BINARY_NAME
+        cd ../../../release
+        sha256sum {{ name }}-{{ version }}.tar.gz > {{ name }}-{{ version }}.tar.gz.sha256
     fi
-    
-    echo "✅ Package created: {{name}}-{{version}}.{{archive_type}}"
+
+    echo "✅ Package created: {{ name }}-{{ version }}.{{ archive_type }}"
 
 release-prep: cli-fmt cli-lint cli-test
     @echo "🔍 Checking if working directory is clean..."
@@ -243,7 +243,7 @@ pre-release-check: docker-build-full
 pre-check:
     @echo "⚡ Running quick pre-release checks (local)..."
     @cargo fmt --check
-    @cargo clippy -- -D warnings  
+    @cargo clippy -- -D warnings
     @cargo test --release
     @echo "✅ Quick checks passed! Run 'just pre-release-check' for full validation."
 
@@ -252,6 +252,37 @@ docker-clean:
     @echo "🧹 Cleaning up Docker test images..."
     @docker rmi moonflare-test:base moonflare-test:musl moonflare-test:cross moonflare-test:full 2>/dev/null || echo "Images already cleaned"
 
-release version:
-    @echo "🚀 Creating release {{version}}..."
-    @./scripts/release.sh
+# release version:
+#     @echo "🚀 Creating release {{version}}..."
+#     @./scripts/release.sh
+
+# Check that release works using GoReleaser (local macOS)
+check-release:
+    #!/usr/bin/env bash
+    export RUNNER_OS=macOS
+    export OPENSSL_DIR=/opt/homebrew/opt/openssl@3
+    export OPENSSL_INCLUDE_DIR=/opt/homebrew/opt/openssl@3/include
+    export OPENSSL_LIB_DIR=/opt/homebrew/opt/openssl@3/lib
+    goreleaser release --snapshot --clean
+
+# Check that release works using GoReleaser (CI Linux)
+check-release-ci:
+    #!/usr/bin/env bash
+    export RUNNER_OS=Linux
+    # Let system OpenSSL be found naturally in CI
+    goreleaser release --snapshot --clean
+
+# Build release version using GoReleaser
+release:
+    #!/usr/bin/env bash
+    export RUNNER_OS=macOS
+    export OPENSSL_DIR=/opt/homebrew/opt/openssl@3
+    export OPENSSL_INCLUDE_DIR=/opt/homebrew/opt/openssl@3/include
+    export OPENSSL_LIB_DIR=/opt/homebrew/opt/openssl@3/lib
+    goreleaser build --clean --single-target
+
+# Build all release targets using GoReleaser
+release-all:
+    #!/usr/bin/env bash
+    export RUNNER_OS=Linux
+    goreleaser build --clean
