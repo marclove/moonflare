@@ -37,6 +37,7 @@ The Moonflare CLI is built in Rust with modern error handling and beautiful UI:
 ### CLI Usage Commands
 - `moonflare init <name> [--path <path>] [--force]` - Initialize new Cloudflare monorepo
 - `moonflare add <type> <name>` - Add project (astro, react, durable-object, crate)
+- `moonflare rename <current_name> <new_name>` - Rename existing project and update configs
 - `moonflare build [project]` - Build all projects or specific project
 - `moonflare dev [project]` - Start development server(s)  
 - `moonflare deploy [project] [--env <environment>]` - Deploy to Cloudflare
@@ -195,3 +196,28 @@ let target = temp_dir.path().join("test-project");
 - `cargo test init_` - Run init-specific tests  
 - `cargo clippy` - Lint checks
 - `cargo fmt` - Code formatting
+
+## CI/CD and Development Infrastructure
+
+### GitHub Actions Workflows
+The project includes comprehensive CI/CD via GitHub Actions:
+- **`check.yml`**: Basic checks and linting on pull requests
+- **`ci.yml`**: Full test suite including property-based tests, build verification, and integration tests
+- **`release.yml`**: Automated release process for tagged versions (v0.1.0)
+
+### GitHub Templates and Documentation
+- **Contributing guidelines**: `.github/CONTRIBUTING.md` with development setup and contribution process
+- **Issue templates**: Structured bug reports and feature requests via YAML templates
+- **Pull request template**: Checklist-based template for consistent PR submissions
+- **Release automation**: `scripts/release.sh` for automated version management
+
+### Project Versioning
+- **Current version**: 0.1.0 (initial release)
+- **Semantic versioning**: Following semver for releases
+- **Git tags**: Automated tagging for releases via GitHub Actions
+
+### Additional Commands and Features
+- **Rename command**: `moonflare rename <current> <new>` handles project renaming with automatic Wrangler config updates
+- **Multi-format Wrangler support**: Handles wrangler.toml, wrangler.json, and wrangler.jsonc files
+- **Enhanced error handling**: Improved error messages and suggestions across all commands
+- **CI environment detection**: Optimized Moon CLI installation and setup for CI environments

@@ -67,6 +67,7 @@ Moonflare leverages [Moon's task orchestration](https://moonrepo.dev/) for intel
 |---------|-------------|---------|
 | `moonflare init <name> [OPTIONS]` | Create new monorepo | `moonflare init my-project [--force]` |
 | `moonflare add <type> <name>` | Add new project | `moonflare add react my-app` |
+| `moonflare rename <current> <new>` | Rename existing project | `moonflare rename my-app frontend` |
 | `moonflare build [project]` | Build projects | `moonflare build [my-app]` |
 | `moonflare dev [project]` | Start dev servers | `moonflare dev [my-app]` |
 | `moonflare deploy [project] [OPTIONS]` | Deploy to Cloudflare | `moonflare deploy [--env staging]` |
@@ -188,6 +189,23 @@ cargo build --release
 # Test the CLI
 ./target/release/moonflare --help
 ```
+
+## CI/CD
+
+Moonflare includes a complete GitHub Actions workflow for continuous integration and deployment:
+
+### GitHub Actions Workflows
+
+- **`check.yml`**: Basic checks and linting on pull requests
+- **`ci.yml`**: Full test suite including property-based tests and build verification
+- **`release.yml`**: Automated release process for tagged versions
+
+### GitHub Templates
+
+The repository includes issue templates and pull request templates to streamline contributions:
+- Bug report template with structured information gathering
+- Feature request template for new functionality proposals
+- Pull request template with checklist for contributors
 
 ### Running Tests
 
