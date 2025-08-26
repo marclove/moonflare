@@ -3,7 +3,44 @@ use anyhow::{Result, bail};
 use colored::*;
 use serde::{Deserialize, Serialize};
 use std::process::Command;
+use std::path::PathBuf;
 use which::which;
+
+// Helper function to find Moon CLI in known locations
+fn find_moon_binary() -> Option<PathBuf> {
+    // First try the normal PATH lookup
+    if let Ok(path) = which("moon") {
+        return Some(path);
+    }
+
+    // In CI environments, check specific proto installation directories
+    // since PATH modifications from GitHub Actions may not be inherited
+    let is_ci = std::env::var("CI").unwrap_or_default().to_lowercase() == "true"
+        || std::env::var("GITHUB_ACTIONS")
+            .unwrap_or_default()
+            .to_lowercase()
+            == "true";
+
+    if is_ci {
+        // Check common proto installation paths in CI
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/home/runner".to_string());
+        let proto_paths = [
+            format!("{}/.proto/shims/moon", home),
+            format!("{}/.proto/bin/moon", home),
+            "/home/runner/.proto/shims/moon".to_string(),
+            "/home/runner/.proto/bin/moon".to_string(),
+        ];
+
+        for path_str in &proto_paths {
+            let path = PathBuf::from(path_str);
+            if path.exists() && path.is_file() {
+                return Some(path);
+            }
+        }
+    }
+
+    None
+}
 
 pub fn check_moon_installation() -> Result<()> {
     let is_ci = std::env::var("CI").unwrap_or_default().to_lowercase() == "true"
@@ -12,12 +49,12 @@ pub fn check_moon_installation() -> Result<()> {
             .to_lowercase()
             == "true";
 
-    match which("moon") {
-        Ok(_) => {
+    match find_moon_binary() {
+        Some(_) => {
             println!("{}", "Moon CLI is installed".green());
             Ok(())
         }
-        Err(_) => {
+        None => {
             if is_ci {
                 // In CI, provide specific guidance about setup-toolchain action
                 eprintln!("{}", "Moon CLI not found in CI environment".red());
@@ -60,7 +97,10 @@ pub fn check_moon_installation() -> Result<()> {
 }
 
 pub async fn run_moon_command(args: &[&str]) -> Result<()> {
-    let mut cmd = Command::new("moon");
+    let moon_binary = find_moon_binary()
+        .unwrap_or_else(|| PathBuf::from("moon"));
+    
+    let mut cmd = Command::new(moon_binary);
     cmd.args(args);
 
     let status = cmd.status()?;
@@ -78,7 +118,10 @@ pub async fn run_moon_command(args: &[&str]) -> Result<()> {
 
 // Run a Moon command with direct stdio passthrough for best UX
 pub async fn run_moon_command_with_error(args: &[&str]) -> std::result::Result<(), MoonflareError> {
-    let mut cmd = Command::new("moon");
+    let moon_binary = find_moon_binary()
+        .unwrap_or_else(|| PathBuf::from("moon"));
+    
+    let mut cmd = Command::new(moon_binary);
     cmd.args(args);
 
     // Let Moon's stdout and stderr pass through directly to preserve colors and formatting
@@ -116,9 +159,9 @@ pub async fn moon_setup() -> Result<()> {
         println!("{}", "Skipping Moon setup in CI environment (toolchain already configured by setup-toolchain action)".blue());
 
         // Verify moon is actually available in CI and provide helpful error if not
-        match which::which("moon") {
-            Ok(_) => Ok(()),
-            Err(_) => {
+        match find_moon_binary() {
+            Some(_) => Ok(()),
+            None => {
                 bail!(
                     "Moon CLI not found in CI environment. This usually means the moonrepo/setup-toolchain action is missing or misconfigured.\n\n\
                     To fix this, ensure your GitHub Actions workflow includes:\n\n\
@@ -139,7 +182,10 @@ pub async fn moon_setup() -> Result<()> {
 
 // Run a Moon command and return the output without printing it
 pub async fn run_moon_command_silent(args: &[&str]) -> Result<String> {
-    let mut cmd = Command::new("moon");
+    let moon_binary = find_moon_binary()
+        .unwrap_or_else(|| PathBuf::from("moon"));
+    
+    let mut cmd = Command::new(moon_binary);
     cmd.args(args);
 
     let output = cmd.output()?;
