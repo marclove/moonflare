@@ -9,7 +9,8 @@ mod ui;
 mod utils;
 
 use commands::{
-    add::AddCommand, build::BuildCommand, deploy::DeployCommand, dev::DevCommand, init::InitCommand, rename::RenameCommand,
+    add::AddCommand, build::BuildCommand, deploy::DeployCommand, dev::DevCommand,
+    init::InitCommand, rename::RenameCommand,
 };
 use ui::MoonflareUI;
 
@@ -217,7 +218,10 @@ async fn main() -> Result<()> {
                 .await
                 .map_err(|e| miette::miette!("Deploy command failed: {}", e))?;
         }
-        Commands::Rename { current_name, new_name } => {
+        Commands::Rename {
+            current_name,
+            new_name,
+        } => {
             let rename_cmd = RenameCommand::new();
             rename_cmd
                 .execute(&current_name, &new_name)

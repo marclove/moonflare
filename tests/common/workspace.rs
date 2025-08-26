@@ -235,8 +235,7 @@ impl MoonflareTestWorkspace {
         let start = Instant::now();
         log(&format!(
             "Renaming project '{}' to '{}'",
-            current_name,
-            new_name
+            current_name, new_name
         ));
 
         let mut cmd = Command::new(&self.moonflare_binary);
@@ -256,10 +255,7 @@ impl MoonflareTestWorkspace {
             );
         }
 
-        log(&format!(
-            "Renamed project in {:?}",
-            start.elapsed()
-        ));
+        log(&format!("Renamed project in {:?}", start.elapsed()));
         Ok(())
     }
 
@@ -272,8 +268,7 @@ impl MoonflareTestWorkspace {
         let start = Instant::now();
         log(&format!(
             "Expecting rename to fail: '{}' to '{}'",
-            current_name,
-            new_name
+            current_name, new_name
         ));
 
         let mut cmd = Command::new(&self.moonflare_binary);

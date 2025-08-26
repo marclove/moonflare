@@ -6,8 +6,11 @@ use std::process::Command;
 use which::which;
 
 pub fn check_moon_installation() -> Result<()> {
-    let is_ci = std::env::var("CI").unwrap_or_default().to_lowercase() == "true" 
-        || std::env::var("GITHUB_ACTIONS").unwrap_or_default().to_lowercase() == "true";
+    let is_ci = std::env::var("CI").unwrap_or_default().to_lowercase() == "true"
+        || std::env::var("GITHUB_ACTIONS")
+            .unwrap_or_default()
+            .to_lowercase()
+            == "true";
 
     match which("moon") {
         Ok(_) => {
@@ -18,16 +21,18 @@ pub fn check_moon_installation() -> Result<()> {
             if is_ci {
                 // In CI, provide specific guidance about setup-toolchain action
                 eprintln!("{}", "Moon CLI not found in CI environment".red());
-                eprintln!("This usually means the moonrepo/setup-toolchain action is missing or misconfigured.");
-                eprintln!("");
+                eprintln!(
+                    "This usually means the moonrepo/setup-toolchain action is missing or misconfigured."
+                );
+                eprintln!();
                 eprintln!("To fix this, ensure your GitHub Actions workflow includes:");
-                eprintln!("");
+                eprintln!();
                 eprintln!("  - name: Setup Moon toolchain");
                 eprintln!("    uses: moonrepo/setup-toolchain@v0");
                 eprintln!("    with:");
                 eprintln!("      auto-install: true");
                 eprintln!("      cache: true");
-                eprintln!("");
+                eprintln!();
                 eprintln!("For more information, see: https://github.com/moonrepo/setup-toolchain");
                 bail!("Moon CLI not available in CI");
             } else {
@@ -100,13 +105,16 @@ pub async fn run_moon_command_with_error(args: &[&str]) -> std::result::Result<(
 
 pub async fn moon_setup() -> Result<()> {
     // Check if we're in a CI environment where toolchain is already set up
-    let is_ci = std::env::var("CI").unwrap_or_default().to_lowercase() == "true" 
-        || std::env::var("GITHUB_ACTIONS").unwrap_or_default().to_lowercase() == "true";
-    
+    let is_ci = std::env::var("CI").unwrap_or_default().to_lowercase() == "true"
+        || std::env::var("GITHUB_ACTIONS")
+            .unwrap_or_default()
+            .to_lowercase()
+            == "true";
+
     if is_ci {
         // In CI, skip moon setup since moonrepo/setup-toolchain action already handles this
         println!("{}", "Skipping Moon setup in CI environment (toolchain already configured by setup-toolchain action)".blue());
-        
+
         // Verify moon is actually available in CI and provide helpful error if not
         match which::which("moon") {
             Ok(_) => Ok(()),

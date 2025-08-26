@@ -1,9 +1,9 @@
 use crate::ui::MoonflareUI;
 use crate::utils::fs::is_moonflare_workspace;
 use anyhow::{Result, bail};
+use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
-use serde_json::Value;
 use toml::Value as TomlValue;
 
 pub struct RenameCommand {
@@ -136,7 +136,7 @@ impl RenameCommand {
     fn update_wrangler_jsonc(&self, jsonc_path: &Path, new_name: &str) -> Result<()> {
         // For .jsonc files, we need to preserve comments while updating the name
         let content = fs::read_to_string(jsonc_path)?;
-        
+
         // Simple regex-based replacement to preserve comments
         // This looks for "name": "old_name" and replaces with "name": "new_name"
         let name_pattern = regex::Regex::new(r#""name"\s*:\s*"[^"]*""#)?;

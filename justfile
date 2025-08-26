@@ -58,7 +58,7 @@ cli-test: cli-build
     @cargo test
 
 cli-lint:
-    @cargo clippy
+    @cargo clippy -- -D warnings
 
 cli-fmt:
     @cargo fmt
