@@ -115,9 +115,11 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu
+          fi
           if [[ "${{ matrix.target }}" == *"musl"* ]]; then
-            sudo apt-get install -y musl-tools
+            sudo apt-get install -y musl-tools musl-dev
           fi
 
       - name: Cache Cargo dependencies
@@ -133,9 +135,15 @@ jobs:
             ${{ runner.os }}-${{ matrix.target }}-cargo-
             ${{ runner.os }}-cargo-
 
-      - name: Install cargo-cross (for cross-compilation)
-        if: matrix.os == 'ubuntu-latest' && matrix.target != 'x86_64-unknown-linux-gnu'
-        run: cargo install cross --git https://github.com/cross-rs/cross
+      - name: Install cargo-cross (for ARM64 cross-compilation)
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          # Use pre-compiled binary instead of `cargo install cross` to avoid 
+          # compilation errors with static-mut-refs that occur with newer Rust versions.
+          # This ensures we can cross-compile to ARM64 without hitting unsafe code issues.
+          curl -L "https://github.com/cross-rs/cross/releases/download/v0.2.5/cross-x86_64-unknown-linux-gnu.tar.gz" | tar xz
+          sudo mv cross /usr/local/bin/
+          cross --version
 
       - name: Build binary
         shell: bash

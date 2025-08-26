@@ -114,9 +114,15 @@ build-target target:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "🔄 Building for target: {{target}}"
+    
+    # Use native cargo for same-platform builds and simple cross-compilation
     if [[ "{{target}}" == "x86_64-unknown-linux-gnu" ]] || [[ "$RUNNER_OS" != "Linux" ]]; then
         cargo build --release --target {{target}}
+    elif [[ "{{target}}" == "x86_64-unknown-linux-musl" ]]; then
+        # Use native cargo for musl builds with proper linking
+        CC_x86_64_unknown_linux_musl=musl-gcc cargo build --release --target {{target}}
     else
+        # Only use cross for complex targets that really need it
         cross build --release --target {{target}}
     fi
     echo "✅ Build complete for {{target}}"
