@@ -6,28 +6,48 @@ use std::process::Command;
 use which::which;
 
 pub fn check_moon_installation() -> Result<()> {
+    let is_ci = std::env::var("CI").unwrap_or_default().to_lowercase() == "true" 
+        || std::env::var("GITHUB_ACTIONS").unwrap_or_default().to_lowercase() == "true";
+
     match which("moon") {
         Ok(_) => {
             println!("{}", "Moon CLI is installed".green());
             Ok(())
         }
         Err(_) => {
-            println!("{}", "Moon CLI not found".yellow());
-            println!("Installing Moon via proto...");
+            if is_ci {
+                // In CI, provide specific guidance about setup-toolchain action
+                eprintln!("{}", "Moon CLI not found in CI environment".red());
+                eprintln!("This usually means the moonrepo/setup-toolchain action is missing or misconfigured.");
+                eprintln!("");
+                eprintln!("To fix this, ensure your GitHub Actions workflow includes:");
+                eprintln!("");
+                eprintln!("  - name: Setup Moon toolchain");
+                eprintln!("    uses: moonrepo/setup-toolchain@v0");
+                eprintln!("    with:");
+                eprintln!("      auto-install: true");
+                eprintln!("      cache: true");
+                eprintln!("");
+                eprintln!("For more information, see: https://github.com/moonrepo/setup-toolchain");
+                bail!("Moon CLI not available in CI");
+            } else {
+                // Local development - try to install via proto
+                println!("{}", "Moon CLI not found".yellow());
+                println!("Installing Moon via proto...");
 
-            // Try to install via proto
-            let output = Command::new("proto").args(["install", "moon"]).output();
+                let output = Command::new("proto").args(["install", "moon"]).output();
 
-            match output {
-                Ok(result) if result.status.success() => {
-                    println!("{}", "Moon CLI installed successfully".green());
-                    Ok(())
-                }
-                _ => {
-                    eprintln!("{}", "Failed to install Moon CLI".red());
-                    eprintln!("Please install Moon manually:");
-                    eprintln!("  curl -fsSL https://moonrepo.dev/install/moon.sh | bash");
-                    bail!("Moon CLI installation required");
+                match output {
+                    Ok(result) if result.status.success() => {
+                        println!("{}", "Moon CLI installed successfully".green());
+                        Ok(())
+                    }
+                    _ => {
+                        eprintln!("{}", "Failed to install Moon CLI".red());
+                        eprintln!("Please install Moon manually:");
+                        eprintln!("  curl -fsSL https://moonrepo.dev/install/moon.sh | bash");
+                        bail!("Moon CLI installation required");
+                    }
                 }
             }
         }
@@ -79,8 +99,34 @@ pub async fn run_moon_command_with_error(args: &[&str]) -> std::result::Result<(
 }
 
 pub async fn moon_setup() -> Result<()> {
-    println!("{}", "Setting up Moon workspace...".blue());
-    run_moon_command(&["setup"]).await
+    // Check if we're in a CI environment where toolchain is already set up
+    let is_ci = std::env::var("CI").unwrap_or_default().to_lowercase() == "true" 
+        || std::env::var("GITHUB_ACTIONS").unwrap_or_default().to_lowercase() == "true";
+    
+    if is_ci {
+        // In CI, skip moon setup since moonrepo/setup-toolchain action already handles this
+        println!("{}", "Skipping Moon setup in CI environment (toolchain already configured by setup-toolchain action)".blue());
+        
+        // Verify moon is actually available in CI and provide helpful error if not
+        match which::which("moon") {
+            Ok(_) => Ok(()),
+            Err(_) => {
+                bail!(
+                    "Moon CLI not found in CI environment. This usually means the moonrepo/setup-toolchain action is missing or misconfigured.\n\n\
+                    To fix this, ensure your GitHub Actions workflow includes:\n\n\
+                    - name: Setup Moon toolchain\n      \
+                    uses: moonrepo/setup-toolchain@v0\n      \
+                    with:\n        \
+                    auto-install: true\n        \
+                    cache: true\n\n\
+                    For more information, see: https://github.com/moonrepo/setup-toolchain"
+                );
+            }
+        }
+    } else {
+        println!("{}", "Setting up Moon workspace...".blue());
+        run_moon_command(&["setup"]).await
+    }
 }
 
 // Run a Moon command and return the output without printing it
