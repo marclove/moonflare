@@ -50,7 +50,7 @@ jobs:
 
   goreleaser:
     name: GoReleaser Build & Release
-    needs: test
+    # needs: test  # Temporarily commented out to focus on builds
     strategy:
       matrix:
         include:

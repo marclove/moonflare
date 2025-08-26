@@ -274,7 +274,9 @@ check-release-ci:
 
 # Check that release works using GoReleaser (Windows)
 check-release-windows:
-    @powershell -Command "$env:RUNNER_OS = 'Windows'; goreleaser release --snapshot --clean"
+    #!/usr/bin/env powershell
+    $env:RUNNER_OS = "Windows"
+    goreleaser release --snapshot --clean
 
 # Build release version using GoReleaser
 release:
