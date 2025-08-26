@@ -160,7 +160,11 @@ FILE:tsconfig.app.json
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude" : [
+    "dist",
+    "node_modules"
+  ]
 }
 
 FILE:wrangler.jsonc

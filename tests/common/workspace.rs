@@ -225,4 +225,75 @@ impl MoonflareTestWorkspace {
         log(&format!("Deploy completed in {:?}", start.elapsed()));
         Ok(())
     }
+
+    pub fn rename_project(
+        &self,
+        workspace_name: &str,
+        current_name: &str,
+        new_name: &str,
+    ) -> anyhow::Result<()> {
+        let start = Instant::now();
+        log(&format!(
+            "Renaming project '{}' to '{}'",
+            current_name,
+            new_name
+        ));
+
+        let mut cmd = Command::new(&self.moonflare_binary);
+        cmd.arg("rename")
+            .arg(current_name)
+            .arg(new_name)
+            .current_dir(self.temp_dir.path().join(workspace_name));
+
+        let output = run_command_with_timeout(cmd, 5)?;
+
+        if !output.status.success() {
+            anyhow::bail!(
+                "Failed to rename project '{}' to '{}': {}",
+                current_name,
+                new_name,
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+
+        log(&format!(
+            "Renamed project in {:?}",
+            start.elapsed()
+        ));
+        Ok(())
+    }
+
+    pub fn rename_project_should_fail(
+        &self,
+        workspace_name: &str,
+        current_name: &str,
+        new_name: &str,
+    ) -> anyhow::Result<String> {
+        let start = Instant::now();
+        log(&format!(
+            "Expecting rename to fail: '{}' to '{}'",
+            current_name,
+            new_name
+        ));
+
+        let mut cmd = Command::new(&self.moonflare_binary);
+        cmd.arg("rename")
+            .arg(current_name)
+            .arg(new_name)
+            .current_dir(self.temp_dir.path().join(workspace_name));
+
+        let output = run_command_with_timeout(cmd, 5)?;
+
+        if output.status.success() {
+            anyhow::bail!("Expected rename to fail, but it succeeded");
+        }
+
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        log(&format!(
+            "Rename failed as expected in {:?}: {}",
+            start.elapsed(),
+            stderr.lines().next().unwrap_or("Unknown error")
+        ));
+        Ok(stderr)
+    }
 }

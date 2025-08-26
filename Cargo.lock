@@ -1201,6 +1201,7 @@ dependencies = [
  "iocraft",
  "miette",
  "proptest",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",

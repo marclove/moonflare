@@ -241,6 +241,11 @@ impl MoonflareUI {
                             }
                         }
                         ListItem {
+                            Entry(name: "rename") {
+                                Text(content: "Rename a project and update its configuration")
+                            }
+                        }
+                        ListItem {
                             Entry(name: "help") {
                                 Text(content: "Print this message or help for a specific command")
                             }
@@ -629,6 +634,75 @@ impl MoonflareUI {
                         }
                         ListItem {
                             Text(content: "Supports multiple environments via wrangler.toml configuration")
+                        }
+                    }
+                }
+            }
+        })
+    }
+
+    pub fn render_rename_help(&self) -> Result<(), ConsoleError> {
+        self.console.render(element! {
+            Container {
+                Notice(variant: Variant::Info, title: "moonflare rename".to_owned()) {
+                    Text(content: "Rename a project and update its configuration files")
+                }
+                Section(title: "Usage") {
+                    StyledText(content: "moonflare rename <CURRENT_NAME> <NEW_NAME>", style: Style::Shell)
+                }
+
+                Section(title: "Arguments") {
+                    List {
+                        ListItem {
+                            Entry(name: "<CURRENT_NAME>") {
+                                Text(content: "Current name of the project to rename")
+                            }
+                        }
+                        ListItem {
+                            Entry(name: "<NEW_NAME>") {
+                                Text(content: "New name for the project")
+                            }
+                        }
+                    }
+                }
+
+                Section(title: "Options") {
+                    List {
+                        ListItem {
+                            Entry(name: "-h, --help") {
+                                Text(content: "Print help")
+                            }
+                        }
+                    }
+                }
+
+                Section(title: "Examples") {
+                    List {
+                        ListItem {
+                            StyledText(content: "moonflare rename frontend web-app  # Rename React app", style: Style::Shell)
+                        }
+                        ListItem {
+                            StyledText(content: "moonflare rename api backend       # Rename Worker/DO", style: Style::Shell)
+                        }
+                        ListItem {
+                            StyledText(content: "moonflare rename utils core        # Rename Rust crate", style: Style::Shell)
+                        }
+                        ListItem {
+                            StyledText(content: "moonflare rename site marketing    # Rename Astro site", style: Style::Shell)
+                        }
+                    }
+                }
+
+                Section(title: "What Gets Updated") {
+                    List {
+                        ListItem {
+                            Text(content: "Directory name is changed for all project types")
+                        }
+                        ListItem {
+                            Text(content: "wrangler.toml/wrangler.json/wrangler.jsonc 'name' field (web projects)")
+                        }
+                        ListItem {
+                            Text(content: "Preserves all other project configuration and files")
                         }
                     }
                 }

@@ -9,7 +9,7 @@ mod ui;
 mod utils;
 
 use commands::{
-    add::AddCommand, build::BuildCommand, deploy::DeployCommand, dev::DevCommand, init::InitCommand,
+    add::AddCommand, build::BuildCommand, deploy::DeployCommand, dev::DevCommand, init::InitCommand, rename::RenameCommand,
 };
 use ui::MoonflareUI;
 
@@ -62,6 +62,14 @@ enum Commands {
         project: Option<String>,
         #[arg(long, help = "Environment to deploy to")]
         env: Option<String>,
+    },
+
+    #[command(about = "Rename a project")]
+    Rename {
+        #[arg(help = "Current project name")]
+        current_name: String,
+        #[arg(help = "New project name")]
+        new_name: String,
     },
 }
 
@@ -119,6 +127,11 @@ async fn main() -> Result<()> {
                     .map_err(|e| miette::miette!("Failed to render help: {}", e))?;
                 return Ok(());
             }
+            "rename" => {
+                ui.render_rename_help()
+                    .map_err(|e| miette::miette!("Failed to render help: {}", e))?;
+                return Ok(());
+            }
             _ => {
                 // Fall back to clap for other commands
             }
@@ -160,6 +173,11 @@ async fn main() -> Result<()> {
                         .map_err(|e| miette::miette!("Failed to render help: {}", e))?;
                     return Ok(());
                 }
+                "rename" => {
+                    ui.render_rename_help()
+                        .map_err(|e| miette::miette!("Failed to render help: {}", e))?;
+                    return Ok(());
+                }
                 _ => {
                     // Fall back to clap for other commands
                 }
@@ -198,6 +216,13 @@ async fn main() -> Result<()> {
                 .execute(project.as_deref(), env.as_deref())
                 .await
                 .map_err(|e| miette::miette!("Deploy command failed: {}", e))?;
+        }
+        Commands::Rename { current_name, new_name } => {
+            let rename_cmd = RenameCommand::new();
+            rename_cmd
+                .execute(&current_name, &new_name)
+                .await
+                .map_err(|e| miette::miette!("Rename command failed: {}", e))?;
         }
     }
 

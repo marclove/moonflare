@@ -123,7 +123,12 @@ FILE:tsconfig.json
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+    "exclude" : [
+      "dist",
+      "node_modules",
+      ".astro"
+    ]
   }
 }
 
