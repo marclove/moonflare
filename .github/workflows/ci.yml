@@ -28,6 +28,20 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v2
 
+      - name: Setup Node.js toolchain
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install pnpm globally
+        run: |
+          echo "=== INSTALLING PNPM ==="
+          npm install -g pnpm
+          echo "pnpm version: $(pnpm --version)"
+          echo "pnpm location: $(which pnpm)"
+          echo ""
+
       - name: Cache Cargo dependencies
         uses: actions/cache@v4
         with:
@@ -80,7 +94,11 @@ jobs:
           echo "=== RUNNING TESTS ==="
           echo "Moon binary location before tests: $(which moon)"
           echo "Moon accessible via PATH: $(moon --version)"
-          just ci-test
+          echo "pnpm accessible via PATH: $(pnpm --version)"
+          echo "Node.js version: $(node --version)"
+          echo ""
+          echo "Running tests sequentially to avoid property-based test conflicts..."
+          just ci-test-sequential
 
   build:
     name: Build for ${{ matrix.target }}

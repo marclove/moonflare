@@ -100,7 +100,11 @@ ci-check: cli-fmt cli-lint cli-check
     @echo "✅ CI checks complete"
 
 ci-test: cli-test
-    @echo "✅ CI tests complete"  
+    @echo "✅ CI tests complete"
+
+# Run tests sequentially in CI to avoid parallelization issues with property-based tests
+ci-test-sequential: cli-build
+    @cargo test -- --test-threads=1  
 
 test-fast:
     @cargo test --bins
