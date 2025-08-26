@@ -28,7 +28,7 @@ Download the latest release for your platform from the [Releases page](https://g
 **Available platforms:**
 - macOS (Intel and Apple Silicon)
 - Linux (x86_64 and ARM64)
-- Windows: Build from source (see below)
+- Windows (x86_64 MSVC)
 
 ### Build from Source
 
@@ -45,7 +45,9 @@ export PATH="$PWD/target/release:$PATH"
 
 ### Windows Users
 
-Pre-built Windows binaries use MinGW for maximum compatibility. If you prefer to build with MSVC (Visual Studio toolchain) for better integration with Windows development tools:
+Pre-built Windows binaries are now available and built with the MSVC toolchain for optimal compatibility with Windows development tools.
+
+If you prefer to build from source:
 
 ```powershell
 # Ensure you have Rust with MSVC toolchain

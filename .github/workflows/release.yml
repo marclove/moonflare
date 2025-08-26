@@ -51,24 +51,40 @@ jobs:
   goreleaser:
     name: GoReleaser Build & Release
     needs: test
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            runner_os: Linux
+          - os: windows-2025
+            runner_os: Windows
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install Rust toolchain
+      - name: Install Rust toolchain (Unix)
+        if: matrix.runner_os == 'Linux'
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
 
-      - name: Install Zig
+      - name: Install Rust toolchain (Windows)
+        if: matrix.runner_os == 'Windows'
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable-msvc
+
+      - name: Install Zig (Unix only)
+        if: matrix.runner_os == 'Linux'
         uses: goto-bus-stop/setup-zig@v2
         with:
           version: 0.13.0
 
-      - name: Install cargo-zigbuild
+      - name: Install cargo-zigbuild (Unix only)
+        if: matrix.runner_os == 'Linux'
         run: cargo install --locked cargo-zigbuild
 
       - name: Run GoReleaser
@@ -79,4 +95,4 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUNNER_OS: Linux
+          RUNNER_OS: ${{ matrix.runner_os }}

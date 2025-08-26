@@ -23,20 +23,16 @@ builds:
       - OPENSSL_STATIC=1
       - PKG_CONFIG_ALLOW_CROSS=1
       - OPENSSL_NO_VENDOR=1
+    skip: "{{ eq .Env.RUNNER_OS \"Windows\" }}"
 
-# Windows builds disabled due to cross-compilation complexity
-# Windows users can build locally with: cargo build --release
-# - id: moonflare-windows
-#   builder: rust
-#   tool: cargo
-#   command: zigbuild
-#   flags: [--release]
-#   targets:
-#     - x86_64-pc-windows-gnu
-#   env:
-#     - OPENSSL_STATIC=1
-#     - PKG_CONFIG_ALLOW_CROSS=1
-#     - OPENSSL_NO_VENDOR=1
+  - id: moonflare-windows
+    builder: rust
+    tool: cargo
+    command: build
+    flags: [--release]
+    targets:
+      - x86_64-pc-windows-msvc
+    skip: "{{ ne .Env.RUNNER_OS \"Windows\" }}"
 
 
 # Creates archives for each target.

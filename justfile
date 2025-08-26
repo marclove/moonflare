@@ -272,6 +272,12 @@ check-release-ci:
     # Let system OpenSSL be found naturally in CI
     goreleaser release --snapshot --clean
 
+# Check that release works using GoReleaser (Windows)
+check-release-windows:
+    #!/usr/bin/env pwsh
+    $env:RUNNER_OS = "Windows"
+    goreleaser release --snapshot --clean
+
 # Build release version using GoReleaser
 release:
     #!/usr/bin/env bash
