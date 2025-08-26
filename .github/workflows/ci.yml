@@ -166,9 +166,15 @@ jobs:
       # Patching this issue: https://github.com/marclove/moonflare/actions/runs/17230247240/job/48882719519
       # https://github.com/cross-rs/cross/issues/1561
       # https://github.com/backslashxx/KernelSU/blob/a01df94a298e4a33b5b422b44f0a49eb24760e15/.github/workflows/ksud.yml
-      - name: Install cross
+      - name: Install cross (nix)
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
         run: |
           RUSTFLAGS="" cargo install cross --git https://github.com/cross-rs/cross --rev 66845c1
+      - name: Install cross (windows)
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
+        run: |
+          $env:RUSTFLAGS=""
+          cargo install cross --git https://github.com/cross-rs/cross --rev 66845c1
 
       - name: Build binary
         shell: bash
