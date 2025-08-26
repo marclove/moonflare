@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -30,6 +32,7 @@ jobs:
         uses: moonrepo/setup-toolchain@v0
         with:
           auto-install: true
+          cache: true
 
       - name: Cache Cargo dependencies
         uses: actions/cache@v4
@@ -47,10 +50,7 @@ jobs:
         run: just ci-check
 
       - name: Run tests
-        run: |
-          # Verify Moon is available
-          moon --version
-          just ci-test
+        run: just ci-test
 
   build:
     name: Build for ${{ matrix.target }}
@@ -85,6 +85,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
