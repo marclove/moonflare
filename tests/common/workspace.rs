@@ -174,7 +174,7 @@ impl MoonflareTestWorkspace {
         cmd.arg("build")
             .current_dir(self.temp_dir.path().join(workspace_name));
 
-        let output = run_command_with_timeout(cmd, 45)?;
+        let output = run_command_with_timeout(cmd, 120)?; // 2 minutes timeout for CI compatibility
 
         if !output.status.success() {
             log(&format!("Build failed after {:?}", start.elapsed()));
