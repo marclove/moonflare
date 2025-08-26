@@ -2,8 +2,8 @@ use crate::errors::MoonflareError;
 use anyhow::{Result, bail};
 use colored::*;
 use serde::{Deserialize, Serialize};
-use std::process::Command;
 use std::path::PathBuf;
+use std::process::Command;
 use which::which;
 
 // Helper function to find Moon CLI in known locations
@@ -16,11 +16,19 @@ fn find_moon_binary() -> Option<PathBuf> {
 
     if is_ci {
         eprintln!("=== MOON BINARY SEARCH IN CI ===");
-        eprintln!("Environment: CI={}, GITHUB_ACTIONS={}", 
+        eprintln!(
+            "Environment: CI={}, GITHUB_ACTIONS={}",
             std::env::var("CI").unwrap_or_default(),
-            std::env::var("GITHUB_ACTIONS").unwrap_or_default());
-        eprintln!("Current PATH: {}", std::env::var("PATH").unwrap_or_default());
-        eprintln!("HOME directory: {}", std::env::var("HOME").unwrap_or_default());
+            std::env::var("GITHUB_ACTIONS").unwrap_or_default()
+        );
+        eprintln!(
+            "Current PATH: {}",
+            std::env::var("PATH").unwrap_or_default()
+        );
+        eprintln!(
+            "HOME directory: {}",
+            std::env::var("HOME").unwrap_or_default()
+        );
         eprintln!();
     }
 
@@ -29,7 +37,11 @@ fn find_moon_binary() -> Option<PathBuf> {
         if is_ci {
             eprintln!("✓ Found Moon via PATH: {}", path.display());
             if let Ok(metadata) = std::fs::metadata(&path) {
-                eprintln!("  File exists: {}, Size: {} bytes", metadata.is_file(), metadata.len());
+                eprintln!(
+                    "  File exists: {}, Size: {} bytes",
+                    metadata.is_file(),
+                    metadata.len()
+                );
             }
         }
         return Some(path);
@@ -40,15 +52,24 @@ fn find_moon_binary() -> Option<PathBuf> {
     if is_ci {
         eprintln!();
         eprintln!("Checking expected installation locations:");
-        
+
         // Check /usr/local/bin/moon (where we install it in CI)
         let usr_local_moon = PathBuf::from("/usr/local/bin/moon");
-        eprintln!("  /usr/local/bin/moon: {}", 
-            if usr_local_moon.exists() { 
-                format!("EXISTS ({})", if usr_local_moon.is_file() { "file" } else { "not a file" })
-            } else { 
-                "NOT FOUND".to_string() 
-            });
+        eprintln!(
+            "  /usr/local/bin/moon: {}",
+            if usr_local_moon.exists() {
+                format!(
+                    "EXISTS ({})",
+                    if usr_local_moon.is_file() {
+                        "file"
+                    } else {
+                        "not a file"
+                    }
+                )
+            } else {
+                "NOT FOUND".to_string()
+            }
+        );
 
         if usr_local_moon.exists() && usr_local_moon.is_file() {
             eprintln!("✓ Using Moon from /usr/local/bin/moon");
@@ -58,12 +79,22 @@ fn find_moon_binary() -> Option<PathBuf> {
         // Check ~/.moon/bin/moon (default Moon installation location)
         let home = std::env::var("HOME").unwrap_or_else(|_| "/home/runner".to_string());
         let home_moon = PathBuf::from(format!("{}/.moon/bin/moon", home));
-        eprintln!("  {}/.moon/bin/moon: {}", home,
-            if home_moon.exists() { 
-                format!("EXISTS ({})", if home_moon.is_file() { "file" } else { "not a file" })
-            } else { 
-                "NOT FOUND".to_string() 
-            });
+        eprintln!(
+            "  {}/.moon/bin/moon: {}",
+            home,
+            if home_moon.exists() {
+                format!(
+                    "EXISTS ({})",
+                    if home_moon.is_file() {
+                        "file"
+                    } else {
+                        "not a file"
+                    }
+                )
+            } else {
+                "NOT FOUND".to_string()
+            }
+        );
 
         if home_moon.exists() && home_moon.is_file() {
             eprintln!("✓ Using Moon from {}/.moon/bin/moon", home);
@@ -82,13 +113,18 @@ fn find_moon_binary() -> Option<PathBuf> {
         eprintln!("Legacy proto paths (for debugging):");
         for path_str in &proto_paths {
             let path = PathBuf::from(path_str);
-            eprintln!("  {}: {}", 
+            eprintln!(
+                "  {}: {}",
                 path_str,
-                if path.exists() { 
-                    format!("EXISTS ({})", if path.is_file() { "file" } else { "not a file" })
-                } else { 
-                    "NOT FOUND".to_string() 
-                });
+                if path.exists() {
+                    format!(
+                        "EXISTS ({})",
+                        if path.is_file() { "file" } else { "not a file" }
+                    )
+                } else {
+                    "NOT FOUND".to_string()
+                }
+            );
         }
 
         eprintln!();
@@ -153,9 +189,8 @@ pub fn check_moon_installation() -> Result<()> {
 }
 
 pub async fn run_moon_command(args: &[&str]) -> Result<()> {
-    let moon_binary = find_moon_binary()
-        .unwrap_or_else(|| PathBuf::from("moon"));
-    
+    let moon_binary = find_moon_binary().unwrap_or_else(|| PathBuf::from("moon"));
+
     let mut cmd = Command::new(moon_binary);
     cmd.args(args);
 
@@ -174,9 +209,8 @@ pub async fn run_moon_command(args: &[&str]) -> Result<()> {
 
 // Run a Moon command with direct stdio passthrough for best UX
 pub async fn run_moon_command_with_error(args: &[&str]) -> std::result::Result<(), MoonflareError> {
-    let moon_binary = find_moon_binary()
-        .unwrap_or_else(|| PathBuf::from("moon"));
-    
+    let moon_binary = find_moon_binary().unwrap_or_else(|| PathBuf::from("moon"));
+
     let mut cmd = Command::new(moon_binary);
     cmd.args(args);
 
@@ -238,9 +272,8 @@ pub async fn moon_setup() -> Result<()> {
 
 // Run a Moon command and return the output without printing it
 pub async fn run_moon_command_silent(args: &[&str]) -> Result<String> {
-    let moon_binary = find_moon_binary()
-        .unwrap_or_else(|| PathBuf::from("moon"));
-    
+    let moon_binary = find_moon_binary().unwrap_or_else(|| PathBuf::from("moon"));
+
     let mut cmd = Command::new(moon_binary);
     cmd.args(args);
 

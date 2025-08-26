@@ -1,0 +1,54 @@
+# Multi-stage Dockerfile for testing Moonflare locally
+# This mimics the GitHub Actions CI environment for local testing
+
+# Base Ubuntu image with common dependencies
+FROM --platform=linux/amd64 ubuntu:24.04 as base
+
+# Install system dependencies
+RUN apt-get update -qq && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+    curl \
+    git \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Install just
+RUN curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
+
+# x86_64 musl target stage
+FROM base as musl-test
+RUN rustup target add x86_64-unknown-linux-musl && \
+    apt-get update -qq && \
+    apt-get install -y -qq musl-tools musl-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# ARM64 cross-compilation stage  
+FROM base as cross-test
+RUN rustup target add aarch64-unknown-linux-gnu && \
+    apt-get update -qq && \
+    apt-get install -y -qq gcc-aarch64-linux-gnu && \
+    rm -rf /var/lib/apt/lists/* && \
+    # Install pre-compiled cross binary
+    curl -L "https://github.com/cross-rs/cross/releases/download/v0.2.5/cross-x86_64-unknown-linux-gnu.tar.gz" | tar xz && \
+    mv cross /usr/local/bin/ && \
+    cross --version
+
+# Full test environment (combines all targets)
+FROM base as full-test
+RUN rustup target add x86_64-unknown-linux-musl aarch64-unknown-linux-gnu && \
+    apt-get update -qq && \
+    apt-get install -y -qq musl-tools musl-dev gcc-aarch64-linux-gnu && \
+    rm -rf /var/lib/apt/lists/* && \
+    # Install pre-compiled cross binary
+    curl -L "https://github.com/cross-rs/cross/releases/download/v0.2.5/cross-x86_64-unknown-linux-gnu.tar.gz" | tar xz && \
+    mv cross /usr/local/bin/ && \
+    cross --version
+
+WORKDIR /workspace
