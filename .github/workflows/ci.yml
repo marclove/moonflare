@@ -26,6 +26,11 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v2
 
+      - name: Install Moon CLI
+        run: |
+          curl -fsSL https://moonrepo.dev/install/moon.sh | bash
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+
       - name: Cache Cargo dependencies
         uses: actions/cache@v4
         with:
