@@ -28,17 +28,24 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v2
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
       - name: Setup Node.js toolchain
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'pnpm'
+          cache-dependency-path: '**/pnpm-lock.yaml'
 
-      - name: Install pnpm globally
+      - name: Verify pnpm installation
         run: |
-          echo "=== INSTALLING PNPM ==="
-          npm install -g pnpm
+          echo "=== VERIFYING PNPM ==="
           echo "pnpm version: $(pnpm --version)"
           echo "pnpm location: $(which pnpm)"
+          echo "Node.js version: $(node --version)"
           echo ""
 
       - name: Cache Cargo dependencies
